@@ -264,6 +264,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "",
         "{angle: degrees, clockwise on screen as the status bar shows it} turn the view to that angle about the center of the canvas; returns {angle}, normalized to (-180, 180]",
     ),
+    (
+        "view.rotateToSelection",
+        "Rotate View to Selection",
+        "",
+        "{} turn the view about the center of the canvas to the angle the selected objects share (selectionRotation in document.inspect, 0 when they differ), so their bounding box is square to the window; returns {angle}",
+    ),
     ("view.rotateReset", "Reset Rotate View", "Cmd+Shift+1", "{}"),
     ("window.control", "Control", "", "{}"),
     ("window.toolbar", "Tools", "", "{}"),
@@ -318,7 +324,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "{pinned?: bool} keep the Contextual Task Bar where it is instead of following the selection (true), let it follow the selection again from where it is (false) or toggle (omitted), as the bar's More Options menu does; returns the new state",
     ),
     ("window.taskBar.reset", "Reset Bar Position", "", "{} unpin the Contextual Task Bar and put it back under the selection"),
-    ("window.dock", "Panels", "Tab", "{} show/hide all panels"),
+    (
+        "window.dock",
+        "Panels",
+        "Tab",
+        "{} hide the panels, the toolbar and the Control bar, or show again the ones the last Tab hid (all three when none of them shows and Tab hid none); returns whether it showed them",
+    ),
     (
         "window.panels",
         "Panels Except Tools and Control",
@@ -1238,6 +1249,22 @@ pub fn run_ui_command(app: &mut VectorcraftApp, id: &str, p: &Value) -> Option<R
                 None => Err("no document".into()),
             }
         }
+        // View › Rotate View to Selection: the view turns about the center of the canvas to the angle
+        // of the selection's bounding box, so the box is square to the window.
+        "view.rotateToSelection" => {
+            let Some(st) = app.session.active() else { return Some(Err("no document".into())) };
+            if st.selection.objects.is_empty() {
+                return Some(Err("nothing selected".into()));
+            }
+            let angle = vectorcraft_geom::normalize_deg(st.doc.bbox_angle(&st.selection.objects));
+            match app.view_mut() {
+                Some(v) => {
+                    v.rotation = angle;
+                    Ok(json!({ "angle": angle }))
+                }
+                None => Err("no document".into()),
+            }
+        }
         "view.rotateReset" => {
             if let Some(v) = app.view_mut() {
                 v.rotation = 0.0;
@@ -1279,13 +1306,29 @@ pub fn run_ui_command(app: &mut VectorcraftApp, id: &str, p: &Value) -> Option<R
             Ok(Value::Null)
         }
         "window.dock" => {
-            let on = !(app.ui.dock && app.ui.toolbar);
-            app.ui.dock = on;
-            app.ui.toolbar = on;
-            app.ui.control_bar = on;
-            if !on {
-                app.ui.open_panel = None;
-            }
+            let ui = &mut app.ui;
+            // The bars the last Tab hid show again, unless the toolbar or the Control bar was shown
+            // another way since then (Window › Tools, Window › Control). Panels shown with Shift+Tab
+            // in between stay shown. Switching workspaces clears the record (`workspaces::apply`).
+            let hid = ui.tab_hid.take().filter(|h| (h.dock || h.toolbar || h.control_bar) && !ui.toolbar && !ui.control_bar);
+            let on = if let Some(h) = hid {
+                ui.dock |= h.dock;
+                ui.toolbar = h.toolbar;
+                ui.control_bar = h.control_bar;
+                true
+            } else if ui.dock || ui.toolbar || ui.control_bar {
+                ui.tab_hid = Some(crate::state::TabHid { dock: ui.dock, toolbar: ui.toolbar, control_bar: ui.control_bar });
+                ui.dock = false;
+                ui.toolbar = false;
+                ui.control_bar = false;
+                ui.open_panel = None;
+                false
+            } else {
+                ui.dock = true;
+                ui.toolbar = true;
+                ui.control_bar = true;
+                true
+            };
             Ok(json!(on))
         }
         "window.panels" => {
@@ -2092,6 +2135,7 @@ pub fn enabled(app: &VectorcraftApp, id: &str) -> bool {
         | "view.fitAll"
         | "view.actualSize"
         | "view.rotate" => app.session.active().is_some(),
+        "view.rotateToSelection" => app.session.active().is_some_and(|d| !d.selection.objects.is_empty()),
         id if id.starts_with("file.openRecent") => recent_slot(app, id).is_some(),
         "file.clearRecent" => !app.ui.recent_files.is_empty(),
         id if id.starts_with("type.recentFont") => {
@@ -2676,6 +2720,7 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
                 c("Actual Size", "view.actualSize"),
                 Sep,
                 sub("Rotate View", crate::state::ROTATE_VIEW_ANGLES.iter().map(|(l, a)| cp(l, "view.rotate", json!({ "angle": a }))).collect()),
+                c("Rotate View to Selection", "view.rotateToSelection"),
                 c("Reset Rotate View", "view.rotateReset"),
                 Sep,
                 c("Hide Edges", "view.edges"),
