@@ -1955,6 +1955,8 @@ mod tests_objexpand;
 #[cfg(test)]
 mod tests_opacitymask;
 #[cfg(test)]
+mod tests_outlineobject;
+#[cfg(test)]
 mod tests_outlinestroke;
 #[cfg(test)]
 mod tests_overprint;
