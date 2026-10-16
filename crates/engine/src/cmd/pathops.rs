@@ -853,14 +853,11 @@ fn split_into_grid(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let ids = s.edit("Split Into Grid", |d, sel| {
         d.remove_many(&below)?;
-        let (par, idx, _) = d.position(top.id).ok_or(EngineError::NoNode(top.id))?;
         let layer = d.layer_containing(top.id);
-        d.remove(top.id)?;
-        let mut out = Vec::with_capacity(cells.len());
-        for (k, c) in cells.into_iter().enumerate() {
-            let node = shape_node(d, c, Some(&top));
-            out.push(d.insert(par, idx + k, node)?);
-        }
+        // Up to 250,000 cells: one splice where the topmost path was, not an insert per cell.
+        let nodes: Vec<Node> = cells.into_iter().map(|c| shape_node(d, c, Some(&top))).collect();
+        let out: Vec<NodeId> = nodes.iter().map(|n| n.id).collect();
+        d.insert_beside(vec![(top.id, nodes)], true)?;
         d.guides.extend(edges.iter().map(|&(vertical, pos)| vectorcraft_doc::Guide { layer, ..vectorcraft_doc::Guide::new(vertical, pos) }));
         sel.set(out.iter().copied());
         Ok(out)
