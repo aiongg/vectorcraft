@@ -4,10 +4,12 @@
 //! language level.
 //!
 //! Fields: `document.export` params (`format: eps`, `path?`, the artboard choice) and the EPS
-//! options of `document.exportEps`. OK remembers the options for next time and writes the file
-//! (asking where when there is no path); bad options keep the dialog open.
+//! options of `document.exportEps`; during a Save As or Save a Copy to EPS, `__save` names the
+//! save command. OK remembers the options for next time and writes the file (asking where when
+//! there is no path); bad options keep the dialog open.
 
 use serde_json::{Map, Value, json};
+use vectorcraft_engine::cmd::fileio::SaveMode;
 use vectorcraft_engine::cmd::{FlattenOptions, fileio};
 use vectorcraft_eps::{Level, Overprint, Preview};
 
@@ -23,6 +25,7 @@ pub(super) const SPEC: DialogSpec = DialogSpec {
     body,
     confirm,
     ok: Some("Export"),
+    ok_label: Some(|app| if app.ui.dialog.as_ref().is_some_and(|d| SaveMode::of(&d.str("__save")).is_some()) { "Save" } else { "Export" }),
     min_width: 420.0,
     max_width: Some(460.0),
     ..DialogSpec::FORM
@@ -124,13 +127,18 @@ fn body(app: &mut VectorcraftApp, ui: &mut egui::Ui, d: &mut Dialog) -> bool {
 /// Check the options, remember them, and write the file(s).
 fn confirm(app: &mut VectorcraftApp, d: &Dialog) -> Result<Value, String> {
     let params = fileio::eps::resolve(&super::form::params(d), &app.session.prefs.flattener_presets)?;
+    let save = SaveMode::of(&d.str("__save"));
     // Nothing selected keeps the dialog open too.
-    if let Some(st) = app.session.active() {
+    if let Some(st) = app.session.active().filter(|_| save.is_none()) {
         fileio::export_source(st, &params).map_err(|e| e.to_string())?;
     }
-    app.ui.eps_options =
-        Value::Object(d.fields.iter().filter(|(k, _)| !PER_EXPORT.contains(&k.as_str())).map(|(k, v)| (k.clone(), v.clone())).collect());
+    app.ui.eps_options = Value::Object(
+        d.fields.iter().filter(|(k, _)| !k.starts_with("__") && !PER_EXPORT.contains(&k.as_str())).map(|(k, v)| (k.clone(), v.clone())).collect(),
+    );
     app.ui.dialog = None;
+    if let Some(mode) = save {
+        return io::save_eps(app, mode, params);
+    }
     let path = d.fields.get("path").and_then(Value::as_str).map(str::to_string);
     io::export(app, Some("eps"), path, &params)
 }
