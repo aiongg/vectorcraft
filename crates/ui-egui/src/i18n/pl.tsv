@@ -4102,6 +4102,7 @@ imageTrace	Outline	Kontur
 @msg	the PDF is password-protected: give its password	PDF jest chroniony hasłem: podaj hasło
 @msg	the PDF password is wrong	hasło PDF jest nieprawidłowe
 @msg	the Save PDF dialog didn't open	okno Zapisz PDF nie otworzyło się
+@msg	the EPS Options dialog didn't open	okno Opcje EPS nie otworzyło się
 @msg	the WMF header is damaged	nagłówek WMF jest uszkodzony
 @msg	the art could not be sampled	nie udało się pobrać próbki kompozycji
 @msg	the art has no bounds	kompozycja nie ma granic
