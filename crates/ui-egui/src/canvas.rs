@@ -5365,7 +5365,7 @@ mod tests {
         app.select_tool("selection");
         let st = app.session.active_mut().unwrap();
         let id = st.selection.objects[0];
-        let NodeKind::Group { clip, .. } = &mut st.doc.node_mut(id).unwrap().kind else { panic!("a trace group") };
+        let NodeKind::Group { clip, .. } = &mut std::sync::Arc::make_mut(&mut st.doc).node_mut(id).unwrap().kind else { panic!("a trace group") };
         *clip = true;
         let ctx = egui::Context::default();
         frame(&mut app, &ctx, vec![]);
