@@ -28,6 +28,7 @@ use crate::pathtype::{self, BracketDrag, over_bracket};
 use crate::pie::{self, PieDrag};
 use crate::rulerguide::GuideEdit;
 use crate::shaperwidget;
+use crate::text::SelectedLayouts;
 use crate::typewidget;
 use crate::{Action, Cursor, Mods, Overlay, PointerEvent, PointerKind, Tool, ToolContext, ToolKey, json_ids};
 
@@ -85,6 +86,8 @@ pub struct SelectionTool {
     guide: GuideEdit,
     /// Smart Guides: the centre or anchor under the pointer, and its label ([`Self::hover_point`]).
     hover: Option<(Point, &'static str)>,
+    /// Layouts of the selected type, for its overflow markers.
+    layouts: SelectedLayouts,
 }
 
 /// Snapping for the selection moved as a whole, its targets gathered when the move begins: View →
@@ -535,6 +538,7 @@ impl Tool for SelectionTool {
             State::Pie(d) => o.extend(d.overlays()),
             _ => {}
         }
+        self.layouts.overflow_markers(cx, None, &mut o);
         o.extend(self.guides.iter().cloned());
         o.extend(self.guide.overlays(cx));
         if let (Some((q, label)), State::Idle, true) = (self.hover, &self.state, cx.smart_guides) {
@@ -1391,5 +1395,30 @@ mod tests {
         let mut t = SelectionTool::default();
         t.pointer(&cx, &ev(PointerKind::Down, 400.0, 400.0));
         assert_eq!(t.pointer(&cx, &ev(PointerKind::Up, 400.0, 400.0)), vec![Action::Exec("select.none".into(), json!({}))]);
+    }
+
+    /// #2323: selected area type whose text doesn't fit shows the red out-port plus under the
+    /// Selection and Direct Selection tools, not only while its text is being edited.
+    #[test]
+    fn selected_overflowing_area_type_shows_the_overflow_marker() {
+        let marked = |text: &str, direct: bool| {
+            let mut d = vectorcraft_doc::Document::new(500.0, 500.0);
+            let l = d.layers[0].id;
+            let id = d.alloc_id();
+            let mut t = vectorcraft_doc::TextObject::point(Point::new(300.0, 300.0), text, Default::default());
+            t.kind = vectorcraft_doc::TextKind::Area { frame: vectorcraft_geom::shapes::rectangle(Rect::new(0.0, 0.0, 120.0, 40.0)) };
+            d.insert(Some(l), 0, vectorcraft_doc::Node::new(id, vectorcraft_doc::NodeKind::Text(Box::new(t)))).unwrap();
+            let mut sel = Selection::default();
+            sel.add(id);
+            let p = paint();
+            let c = cx(&d, &sel, &p);
+            let o = if direct { crate::direct::DirectSelectionTool::new(false).overlays(&c) } else { SelectionTool::default().overlays(&c) };
+            o.iter().any(|o| matches!(o, Overlay::Path { color: [230, 30, 30], .. }))
+        };
+        let long = "Some words that do not fit. ".repeat(30);
+        assert!(marked(&long, false), "Selection tool, overflowing");
+        assert!(marked(&long, true), "Direct Selection tool, overflowing");
+        assert!(!marked("Fits", false), "Selection tool, fitting");
+        assert!(!marked("Fits", true), "Direct Selection tool, fitting");
     }
 }
