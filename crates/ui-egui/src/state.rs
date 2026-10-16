@@ -450,6 +450,10 @@ pub struct UiState {
     /// dialog opens on them (#1152).
     #[serde(default)]
     pub offset_path: Value,
+    /// The Transform Each fields confirmed last (scale, move, rotate, reflection, reference point
+    /// and Random; null: never used): its dialog opens on them (#1732).
+    #[serde(default)]
+    pub transform_each: Value,
     /// The DXF Import Options chosen last (fit, scaleLineweights, center, mergeLayers; null:
     /// never used).
     #[serde(default)]
@@ -779,6 +783,7 @@ impl Default for UiState {
             dxf_options: Value::Null,
             eps_options: Value::Null,
             offset_path: Value::Null,
+            transform_each: Value::Null,
             dxf_import: Value::Null,
             home: None,
             layers_panel: Default::default(),

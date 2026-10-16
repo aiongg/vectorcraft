@@ -5,7 +5,8 @@
 //!
 //! Fields: `scaleH`, `scaleV` (%), `moveH`, `moveV` (pt), `rotate` (°), `reflectX`, `reflectY`,
 //! `random`, `reference` (0..8, the 9-point grid), `copy`, `objects`, `patterns`, `corners`,
-//! `strokes` (the last two default to the preferences, which OK updates) and `preview`.
+//! `strokes` (the last two default to the preferences, which OK updates) and `preview`. It opens on
+//! the values of its last OK, Copy excepted.
 
 use serde_json::{Value, json};
 
@@ -24,9 +25,19 @@ const CMD: &str = "object.transformEach";
 pub(super) const SPEC: DialogSpec =
     DialogSpec { heading: |_| tl!("Transform Each").into(), body, confirm, preview: true, min_width: 360.0, ..DialogSpec::FORM };
 
-/// The fields a fresh dialog starts with.
-pub fn fields() -> Value {
-    json!({"scaleH": 100, "scaleV": 100, "moveH": 0, "moveV": 0, "rotate": 0, "reflectX": false, "reflectY": false, "random": false, "reference": 4, "copy": false})
+/// The fields the dialog keeps from its last OK. Copy starts off every time: it is an action, not
+/// a setting.
+const REMEMBERED: [&str; 9] = ["scaleH", "scaleV", "moveH", "moveV", "rotate", "reflectX", "reflectY", "random", "reference"];
+
+/// The fields the dialog opens on: the values it was last confirmed with, else the defaults.
+pub fn fields(app: &VectorcraftApp) -> Value {
+    let mut f = json!({"scaleH": 100, "scaleV": 100, "moveH": 0, "moveV": 0, "rotate": 0, "reflectX": false, "reflectY": false, "random": false, "reference": 4, "copy": false});
+    for k in REMEMBERED {
+        if let Some(v) = app.ui.transform_each.get(k) {
+            f[k] = v.clone();
+        }
+    }
+    f
 }
 
 /// The command's parameters without the scale options.
@@ -119,7 +130,10 @@ fn confirm(app: &mut VectorcraftApp, d: &Dialog) -> Result<Value, String> {
     let mut p = params(d);
     add_object_options(app, d, &mut p);
     let p = with_scale_options(app, d, p)?;
-    form::commit_preview(app, CMD, p)
+    let r = form::commit_preview(app, CMD, p)?;
+    let kept = REMEMBERED.into_iter().filter_map(|k| Some((k.to_string(), d.fields.get(k)?.clone())));
+    app.ui.transform_each = Value::Object(kept.collect());
+    Ok(r)
 }
 
 #[cfg(test)]
@@ -155,5 +169,35 @@ mod tests {
         assert_eq!(n.appearance.stroke_width(), 1.0, "strokes kept their weight");
         let (cmd, p) = app.session.journal.last().unwrap();
         assert_eq!((cmd.as_str(), &p["strokes"], &p["objects"]), (CMD, &json!(false), &json!(true)), "#1448: Transform Objects goes along");
+    }
+
+    /// The dialog opens on the values it was last confirmed with, Copy excepted (#1732).
+    #[test]
+    fn reopens_on_the_last_confirmed_values() {
+        let mut app = VectorcraftApp::new(Session::new(), Default::default());
+        app.run("file.new", json!({"width": 300, "height": 300})).unwrap();
+        app.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 50, "height": 50})).unwrap();
+        app.run("select.all", json!({})).unwrap();
+        app.run("ui.menuDialog", json!({ "command": CMD })).unwrap();
+        let d = app.ui.dialog.as_mut().unwrap();
+        for (k, v) in [
+            ("scaleH", json!(150)),
+            ("moveV", json!(12)),
+            ("rotate", json!(30)),
+            ("reflectX", json!(true)),
+            ("reference", json!(0)),
+            ("copy", json!(true)),
+        ] {
+            d.fields.insert(k.into(), v);
+        }
+        super::super::confirm(&mut app).unwrap();
+        assert!(app.ui.dialog.is_none());
+        app.run("ui.menuDialog", json!({ "command": CMD })).unwrap();
+        let d = app.ui.dialog.as_ref().unwrap();
+        assert_eq!(d.kind, KIND);
+        assert_eq!((d.f64("scaleH", 0.0), d.f64("scaleV", 0.0), d.f64("moveV", 0.0), d.f64("rotate", 0.0)), (150.0, 100.0, 12.0, 30.0));
+        assert_eq!((d.bool("reflectX"), d.f64("reference", 4.0), d.bool("copy")), (true, 0.0, false));
+        let saved: crate::state::UiState = serde_json::from_slice(&serde_json::to_vec(&app.ui).unwrap()).unwrap();
+        assert_eq!(saved.transform_each["scaleH"], json!(150), "kept with the other UI state");
     }
 }
