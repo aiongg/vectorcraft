@@ -144,7 +144,7 @@ tools, never checked side by side) isn't captured row by row.
 | Dialogs open with the first field focused and selected; Enter confirms | done | on every open, not only the first (#1367); a first field that starts greyed out takes the focus once enabled (#1395) |
 | Value fields: selected text readable in every brightness; a focused field follows its value when a slider or preview changes it | partial | #1490 (part of #1465: the wheel over a hovered, unfocused field still scrolls the panel), #1457 |
 | Sliders in dialogs and popups (Save for Web, raster export options, Preferences, the opacity popup) show their rail, filled up to the handle | done | #1483 |
-| Rectangular Grid and Polar Grid click dialogs: size, divider counts with a skew slider each, Use Outside Rectangle As Frame / Create Compound Path From Ellipses, Fill Grid; kept as the tool's options, used by drags too | partial | #1377. The options are the documented ones; how far a skew percentage moves the dividers and which way the radial skew turns are our own choice (the public documentation gives neither), and the reference point locator and a double-click on the tool are missing |
+| Rectangular Grid and Polar Grid click dialogs: size, reference point (four corners), divider counts with a skew slider each, Use Outside Rectangle As Frame / Create Compound Path From Ellipses, Fill Grid; kept as the tool's options, used by drags too; a double-click on the tool opens the dialog to set them without drawing | partial | #1377. The options are the documented ones; how far a skew percentage moves the dividers and which way the radial skew turns are our own choice (the public documentation gives neither), as is the top-left default reference point |
 
 ## Modifier keys and temporary tools
 

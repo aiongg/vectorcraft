@@ -1010,20 +1010,31 @@ pub fn opacity_blend(
 /// The 3×3 reference point locator: nine squares, the eight outer ones joined by a line around
 /// the box (the centre one stands alone), the current one filled. Returns a new index when clicked.
 pub fn reference_point(ui: &mut Ui, current: usize) -> Option<usize> {
+    locator(ui, 3, current)
+}
+
+/// The 2×2 reference point locator of the grid tools: the four corners joined by a line around the
+/// box, the current one filled. Returns a new index (in reading order) when clicked.
+pub fn corner_point(ui: &mut Ui, current: usize) -> Option<usize> {
+    locator(ui, 2, current)
+}
+
+/// An `n`×`n` locator: squares in reading order, the outer ones joined by a line around the box.
+fn locator(ui: &mut Ui, n: usize, current: usize) -> Option<usize> {
     let t = Tokens::get(ui.ctx());
     // 5 pt squares with 4 pt gaps; the origin is snapped to whole points so the 1 pt lines through
     // the squares' centres stay crisp.
     let (sq, step) = (5.0, 9.0);
-    let size = 2.0 * step + sq;
+    let size = (n.max(1) - 1) as f32 * step + sq;
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), Sense::hover());
     let o = rect.min.round();
-    let centre = |i: usize| o + Vec2::new(sq / 2.0 + (i % 3) as f32 * step, sq / 2.0 + (i / 3) as f32 * step);
+    let centre = |i: usize| o + Vec2::new(sq / 2.0 + (i % n) as f32 * step, sq / 2.0 + (i / n) as f32 * step);
     let line = Stroke::new(1.0, t.text_dim);
-    ui.painter().rect_stroke(Rect::from_two_pos(centre(0), centre(8)), 0.0, line, StrokeKind::Middle);
+    ui.painter().rect_stroke(Rect::from_two_pos(centre(0), centre(n * n - 1)), 0.0, line, StrokeKind::Middle);
     let mut out = None;
-    for i in 0..9 {
+    for i in 0..n * n {
         let r = Rect::from_center_size(centre(i), Vec2::splat(sq));
-        let resp = ui.interact(r.expand(2.0), ui.id().with(("refpt", i)), Sense::click());
+        let resp = ui.interact(r.expand(2.0), ui.id().with(("refpt", n, i)), Sense::click());
         if resp.clicked() {
             out = Some(i);
         }

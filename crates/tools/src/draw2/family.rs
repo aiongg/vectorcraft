@@ -35,8 +35,15 @@ pub struct FamilyTool {
     pub compound: bool,
     /// The grids take the current fill.
     pub fill: bool,
+    /// The grids' Default Size (width, height in points), which a click's dialog starts from.
+    pub size: [f64; 2],
+    /// The grids' reference point: the corner ([`GRID_ORIGINS`]) a click's grid has at the click.
+    pub origin: &'static str,
     snap: DrawSnap,
 }
+
+/// The corners a grid's reference point can be, in reading order (a 2×2 locator).
+pub const GRID_ORIGINS: [&str; 4] = ["topLeft", "topRight", "bottomLeft", "bottomRight"];
 
 impl FamilyTool {
     pub fn new(id: &str) -> Self {
@@ -62,6 +69,8 @@ impl FamilyTool {
             frame: true,
             compound: false,
             fill: false,
+            size: [100.0; 2],
+            origin: GRID_ORIGINS[0],
             snap: DrawSnap::default(),
         }
     }
@@ -96,6 +105,8 @@ impl FamilyTool {
                 let r = drag_rect(start, p, m);
                 let mut params = self.options();
                 if let Some(o) = params.as_object_mut() {
+                    // Only a click's dialog places the grid by its reference point.
+                    o.remove("origin");
                     o.extend([("x", r.x0), ("y", r.y0), ("width", r.width()), ("height", r.height())].map(|(k, v)| (k.to_string(), json!(v))));
                 }
                 (format!("shape.{}", self.id), params)
@@ -215,9 +226,11 @@ impl Tool for FamilyTool {
             "spiral" => json!({"decay": self.decay, "segments": self.segments, "clockwise": self.clockwise}),
             "rectangularGrid" => json!({
                 "rows": self.rows, "columns": self.columns, "rowSkew": self.skew[0], "columnSkew": self.skew[1], "frame": self.frame, "fill": self.fill,
+                "width": self.size[0], "height": self.size[1], "origin": self.origin,
             }),
             "polarGrid" => json!({
                 "concentric": self.rows, "radial": self.columns, "concentricSkew": self.skew[0], "radialSkew": self.skew[1], "compound": self.compound, "fill": self.fill,
+                "width": self.size[0], "height": self.size[1], "origin": self.origin,
             }),
             _ => json!({"closed": self.closed}),
         }
@@ -235,6 +248,9 @@ impl Tool for FamilyTool {
             "frame" => self.frame = v.as_bool().unwrap_or(self.frame),
             "compound" => self.compound = v.as_bool().unwrap_or(self.compound),
             "fill" => self.fill = v.as_bool().unwrap_or(self.fill),
+            "width" => self.size[0] = v.as_f64().filter(|w| w.is_finite() && *w > 0.0).unwrap_or(self.size[0]),
+            "height" => self.size[1] = v.as_f64().filter(|h| h.is_finite() && *h > 0.0).unwrap_or(self.size[1]),
+            "origin" => self.origin = GRID_ORIGINS.into_iter().find(|o| v.as_str() == Some(*o)).unwrap_or(self.origin),
             _ => {}
         }
     }
@@ -298,17 +314,32 @@ mod tests {
         ] {
             t.set_option(key, &value);
         }
-        let options = json!({"concentric": 2, "radial": 5, "concentricSkew": -40.0, "radialSkew": 500.0, "compound": true, "fill": true});
+        let mut options = json!({
+            "concentric": 2, "radial": 5, "concentricSkew": -40.0, "radialSkew": 500.0, "compound": true, "fill": true,
+            "width": 100.0, "height": 100.0, "origin": "topLeft",
+        });
         assert_eq!(t.options(), options);
         let (command, params) = t.command(Point::new(10.0, 20.0), Point::new(40.0, 80.0), Mods::default());
         assert_eq!(command, "shape.polarGrid");
+        // The drag's box, without the reference point that only a click uses.
+        options.as_object_mut().unwrap().remove("origin");
         let mut want = options;
         want.as_object_mut().unwrap().extend(json!({"x": 10.0, "y": 20.0, "width": 30.0, "height": 60.0}).as_object().unwrap().clone());
         assert_eq!(params, want);
         let mut t = FamilyTool::new("rectangularGrid");
         t.set_option("frame", &json!(false));
         t.set_option("rowSkew", &json!(12.5));
-        assert_eq!(t.options(), json!({"rows": 5, "columns": 5, "rowSkew": 12.5, "columnSkew": 0.0, "frame": false, "fill": false}));
+        t.set_option("width", &json!(250));
+        t.set_option("height", &json!(-3));
+        t.set_option("origin", &json!("bottomRight"));
+        t.set_option("origin", &json!("middle"));
+        assert_eq!(
+            t.options(),
+            json!({
+                "rows": 5, "columns": 5, "rowSkew": 12.5, "columnSkew": 0.0, "frame": false, "fill": false,
+                "width": 250.0, "height": 100.0, "origin": "bottomRight",
+            })
+        );
     }
 
     #[test]
