@@ -147,6 +147,27 @@ fn char_cmd(app: &mut VectorcraftApp, cmd: &str, p: Value) {
     range_style(app, p);
 }
 
+/// Kerning from the Character panel (0: Auto). At a Type tool caret it is the space after the
+/// character before the caret, as `type.step` kerns there; nothing changes at the start of the
+/// text. Otherwise it applies like the other attributes ([`char_cmd`]).
+fn kerning_to(app: &mut VectorcraftApp, v: f64) {
+    let mut p = if v == 0.0 { json!({"kerning": "auto"}) } else { json!({"kerning": v}) };
+    let Some((id, a, _)) = text_editing(app).filter(|&(_, a, b)| a == b) else {
+        format(app, p);
+        return;
+    };
+    let Some(NodeKind::Text(t)) = app.session.active().and_then(|d| d.doc.node(id)).map(|n| &n.kind) else { return };
+    let start = vectorcraft_text::edit::prev_char(&t.plain_text(), a);
+    if start >= a {
+        return;
+    }
+    end_typing(app);
+    p["id"] = json!(id.0);
+    p["start"] = json!(start);
+    p["end"] = json!(a);
+    app.run("text.setRangeStyle", p).ok();
+}
+
 /// The faces Type › Bold and Type › Italic switch to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Face {
@@ -450,7 +471,7 @@ pub(crate) fn metrics_grid(app: &mut VectorcraftApp, ui: &mut Ui, id: &str, s: &
         cell(ui, "VA", tl!("Kerning (0 = Auto)"), |ui| {
             let kerning = shared(app, |s| s.kerning.unwrap_or(0.0));
             if let Some(v) = widgets::spin_plain(ui, "ch-kern", kerning, "", 0, fw, 10.0, -1000.0, &TRACKING_PRESETS) {
-                format(app, if v == 0.0 { json!({"kerning": "auto"}) } else { json!({"kerning": v}) });
+                kerning_to(app, v);
             }
         });
         cell(ui, "VA↔", tl!("Tracking"), |ui| {
@@ -781,6 +802,36 @@ mod tests {
         app.session.set_tool_option("select", &json!({"start": 0, "end": 4}));
         assert_eq!(shared_effective(&app, |s| s.size), Some(10.0));
         assert_eq!(text_style(&app).unwrap().0.size, 5.0);
+    }
+
+    /// Kerning at a caret kerns the pair around it, not the whole text as tracking would (#2217);
+    /// a selected range and selected type objects take it all.
+    #[test]
+    fn kerning_at_a_caret_kerns_one_pair() {
+        let mut app = VectorcraftApp::new(Session::new(), Default::default());
+        app.run("file.new", json!({"width": 300, "height": 200})).unwrap();
+        app.session.select_tool("type", Default::default()).unwrap();
+        let id = app.run("text.create", json!({"x": 20, "y": 50, "text": "AVAV", "size": 12})).unwrap()["id"].as_u64().unwrap();
+        app.session.apply_actions(vec![vectorcraft_tools::Action::Notify("text.editNew".into())]).unwrap();
+        let kerns = |app: &VectorcraftApp| match &app.session.active().unwrap().doc.node(NodeId(id)).unwrap().kind {
+            NodeKind::Text(t) => (0..4).map(|i| vectorcraft_text::edit::insertion_style(&t.runs, i, i + 1).kerning).collect::<Vec<_>>(),
+            _ => panic!("not type"),
+        };
+        app.session.set_tool_option("select", &json!({"start": 2, "end": 2}));
+        let undo = app.session.active().unwrap().history.undo.len();
+        kerning_to(&mut app, -80.0);
+        assert_eq!(kerns(&app), [None, Some(-80.0), None, None], "only the V before the caret");
+        assert_eq!(app.session.active().unwrap().history.undo.len(), undo + 1);
+        assert_eq!(shared(&app, |s| s.kerning), Some(Some(-80.0)), "the field shows the pair's kerning");
+        app.session.set_tool_option("select", &json!({"start": 0, "end": 0}));
+        kerning_to(&mut app, 40.0);
+        assert_eq!(kerns(&app), [None, Some(-80.0), None, None], "nothing before the caret: no change");
+        app.session.set_tool_option("select", &json!({"start": 2, "end": 4}));
+        kerning_to(&mut app, 40.0);
+        assert_eq!(kerns(&app), [None, Some(-80.0), Some(40.0), Some(40.0)], "a selected range");
+        app.session.set_tool_option("select", &json!({"start": 2, "end": 2}));
+        kerning_to(&mut app, 0.0);
+        assert_eq!(kerns(&app), [None, None, Some(40.0), Some(40.0)], "0 is Auto");
     }
 
     /// Bold and Italic pick the family's own faces by name, and toggle back (#724).
