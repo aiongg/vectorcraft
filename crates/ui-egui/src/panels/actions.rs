@@ -67,6 +67,15 @@ pub fn menu(app: &mut VectorcraftApp, ui: &mut egui::Ui) {
     {
         app.status(e);
     }
+    // Set Options… renames the set of the selected action: the panel selects actions, not sets.
+    for (label, action) in [(tl!("Action Options…"), true), (tl!("Set Options…"), false)] {
+        if widgets::menu_item(ui, label, has, false)
+            && let Some((s, a)) = selected
+            && let Err(e) = crate::dialogs::action_options::open(app, s, action.then_some(a))
+        {
+            app.status(e);
+        }
+    }
 }
 
 pub fn show(app: &mut VectorcraftApp, ui: &mut egui::Ui) {
@@ -179,6 +188,34 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// #1358: Action Options… and Set Options… rename the action and its set, an empty name is
+    /// refused with the dialog left open, and the names survive saving the UI preferences.
+    #[test]
+    fn action_options_renames_actions_and_sets_and_the_names_persist() {
+        let mut app = VectorcraftApp::new(Session::new(), Default::default());
+        let rename = |app: &mut VectorcraftApp, params: Value, name: &str| {
+            app.run("ui.actionOptionsDialog", params).unwrap();
+            app.ui.dialog.as_mut().unwrap().fields.insert("name".into(), json!(name));
+            crate::dialogs::confirm(app)
+        };
+        let before = app.ui.action_sets[0].actions[2].name.clone();
+        assert!(rename(&mut app, json!({"set": 0, "action": 2}), "  ").is_err());
+        assert!(app.ui.dialog.is_some(), "an empty name keeps the dialog open");
+        assert_eq!(app.ui.action_sets[0].actions[2].name, before);
+        crate::dialogs::cancel(&mut app);
+        app.run("ui.actionOptionsDialog", json!({"set": 0, "action": 2})).unwrap();
+        assert_eq!(app.ui.dialog.as_ref().unwrap().str("name"), before, "the dialog starts from the current name");
+        crate::dialogs::cancel(&mut app);
+        rename(&mut app, json!({"set": 0, "action": 2}), "Center It").unwrap();
+        rename(&mut app, json!({"set": 0}), "My Actions").unwrap();
+        assert!(app.ui.dialog.is_none());
+        assert!(app.run("ui.actionOptionsDialog", json!({"set": 0, "action": 99})).is_err());
+        let saved: crate::state::UiState = serde_json::from_str(&serde_json::to_string(&app.ui).unwrap()).unwrap();
+        assert_eq!(saved.action_sets[0].name, "My Actions");
+        assert_eq!(saved.action_sets[0].actions[2].name, "Center It");
+        assert_eq!(saved.action_sets[0].actions[2].steps, app.ui.action_sets[0].actions[2].steps, "only the name changes");
     }
 
     /// #1629: a clicked action stays selected, so Play Current Selection plays it and Delete

@@ -765,6 +765,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "",
         "{set?: index, action?: index} open Batch (dialog `actionBatch`) for the action at set/action (default: the first action of the first set); OK runs action.batch with the dialog's source, destination and overrides",
     ),
+    (
+        "ui.actionOptionsDialog",
+        "Action Options…",
+        "",
+        "{set?: index, action?: index} open Action Options (dialog `actionOptions`: set, action, name) for the action at set/action, or Set Options for set `set` when action is absent (default set: the first); OK renames it, and the name is saved with the action sets",
+    ),
     ("file.showPackage", "Show Package", "", "{folder} show a package folder (file.package's folder) in the file manager → {folder}"),
     (
         "docInfo.save",
@@ -1579,6 +1585,10 @@ pub fn run_ui_command(app: &mut VectorcraftApp, id: &str, p: &Value) -> Option<R
             let action = p.get("action").and_then(Value::as_u64).unwrap_or(0) as usize;
             crate::dialogs::action_batch::open(app, set, action)
         }
+        "ui.actionOptionsDialog" => {
+            let index = |k: &str| p.get(k).and_then(Value::as_u64).and_then(|i| usize::try_from(i).ok());
+            crate::dialogs::action_options::open(app, index("set").unwrap_or(0), index("action"))
+        }
         "ui.shortcutImportDialog" => crate::dialogs::shortcut_import::command(app, p),
         "file.showPackage" => crate::dialogs::package::show_package(app, p),
         "docInfo.save" => crate::panels::doc_info::save_report(app, p),
@@ -2209,6 +2219,7 @@ pub fn enabled(app: &VectorcraftApp, id: &str) -> bool {
         "ui.findLinksInFolder" => crate::picks::can(app, &crate::picks::PickRequest::Folder) && app.session.active().is_some(),
         "ui.packageDialog" | "docInfo.save" => app.session.active().is_some(),
         "ui.batchDialog" => !app.ui.action_sets.is_empty() && app.ui.action_sets.iter().any(|s| !s.actions.is_empty()),
+        "ui.actionOptionsDialog" => !app.ui.action_sets.is_empty(),
         "ui.epsOptionsDialog" => app.session.active().is_some(),
         "file.saveForWeb" | "file.saveForWeb.browser" => app.session.active().is_some(),
         "file.exportSelection" => app.session.active().is_some_and(|d| !d.selection.is_empty()),
