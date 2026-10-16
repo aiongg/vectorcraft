@@ -771,7 +771,8 @@ Freehand Tool Options: double-clicking the Pencil, Paintbrush, Smooth, Blob Brus
 keeps: `fidelity` (pt; Pencil, Paintbrush, Smooth), `fill` (Pencil, Paintbrush), `keepSelected` (Pencil, Paintbrush,
 Blob Brush; on by default for the Pencil and Paintbrush and off for the Blob Brush, and while it is off the path a
 stroke draws, continues or merges into is not selected afterwards), `mergeOnlySelection` (Blob Brush; off by default,
-and while it is on a stroke merges only with selected blobs), `closeWithin` and `editWithin` (screen pixels, 0 turns
+and while it is on a stroke merges only with selected blobs), `altSmooth` (Pencil; off by default, and while it is on
+a stroke begun with Alt held smooths the selected paths), `closeWithin` and `editWithin` (screen pixels, 0 turns
 it off; Pencil, Paintbrush) and `size` (pt; Blob Brush, Eraser). `ui.dialog.confirm` runs
 `tool.setOption {tool, values}`.
 
