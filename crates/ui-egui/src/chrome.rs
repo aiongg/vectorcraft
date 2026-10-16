@@ -241,8 +241,9 @@ fn isolation_button(app: &mut VectorcraftApp, ui: &mut Ui) {
     }
 }
 
-/// The room the Control bar's inline X/Y/W/H fields need; with less, only the Transform link shows.
-const INLINE_TRANSFORM_WIDTH: f32 = 440.0;
+/// The room the Control bar's inline reference point locator and X/Y/W/H fields need; with less,
+/// only the Transform link shows.
+const INLINE_TRANSFORM_WIDTH: f32 = 470.0;
 
 /// The Control bar (Window → Control), context-sensitive like Illustrator's.
 pub fn control_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
@@ -345,19 +346,26 @@ pub fn control_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                 crate::panels::align::align_buttons(app, ui, 24.0);
                 ui.separator();
                 // The Transform link opens the whole Transform panel (reference point, rotate,
-                // shear, options) in a popover; X/Y/W/H follow inline while the bar has room.
+                // shear, options) in a popover; the reference point locator and X/Y/W/H follow
+                // inline while the bar has room.
                 crate::panels::transform::link(app, ui);
-                // The bounding box, rotated with rotated objects: its centre and its own sides.
+                // The bounding box, rotated with rotated objects: its reference point and its own
+                // sides. The locator shares the Transform panel's "refpt" state.
                 if let Some(b) = app.selection_box()
                     && ui.available_width() >= INLINE_TRANSFORM_WIDTH
                 {
-                    let c = b.center();
+                    let mut refi: usize = ui.data(|d| d.get_temp(egui::Id::new("refpt"))).unwrap_or(4);
+                    if let Some(i) = widgets::reference_point(ui, refi) {
+                        ui.data_mut(|d| d.insert_temp(egui::Id::new("refpt"), i));
+                        refi = i;
+                    }
+                    let rp = b.reference_point(refi);
                     let origin = app.ruler_origin();
                     let link = crate::panels::transform::proportional(app, ui);
                     let copy = crate::panels::transform::alt_enter_copies(app, ui);
                     for (k, lbl, v, offset) in [
-                        ("x", "X:", c.x, origin.x),
-                        ("y", "Y:", c.y, origin.y),
+                        ("x", "X:", rp.x, origin.x),
+                        ("y", "Y:", rp.y, origin.y),
                         ("width", "W:", b.rect.width(), 0.0),
                         ("height", "H:", b.rect.height(), 0.0),
                     ] {
@@ -373,7 +381,7 @@ pub fn control_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                             widgets::num_field(ui, id, shown, units, 80.0)
                         };
                         if let Some(nv) = set {
-                            app.run("object.setBounds", json!({k: nv + offset, "reference": 4, "proportional": link, "copy": copy})).ok();
+                            app.run("object.setBounds", json!({k: nv + offset, "reference": refi, "proportional": link, "copy": copy})).ok();
                         }
                     }
                 }
@@ -1004,6 +1012,56 @@ pub fn hint_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
 
 #[cfg(test)]
 mod tests {
+
+    /// #1573: the Control bar's locator shares the Transform panel's reference point; X/Y show that
+    /// point and W/H keep it in place.
+    #[test]
+    fn control_bar_fields_follow_the_reference_point() {
+        use egui::{Event, PointerButton, Rect, pos2, vec2};
+        let mut app = crate::VectorcraftApp::new(Session::new(), Default::default());
+        app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
+        app.ui.control_bar = true;
+        let id = app.run("shape.rectangle", json!({"x": 100, "y": 50, "width": 80, "height": 40})).unwrap()["id"].as_u64().unwrap();
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        // The top-left point, as the Transform panel's locator would set it.
+        ctx.data_mut(|d| d.insert_temp(egui::Id::new("refpt"), 0usize));
+        let frame = |app: &mut crate::VectorcraftApp, events: Vec<Event>| {
+            let raw = egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(pos2(0.0, 0.0), vec2(1600.0, 900.0))),
+                time: Some(ctx.input(|i| i.time) + 0.05),
+                events,
+                ..Default::default()
+            };
+            let mut out = ctx.run_ui(raw, |ui| super::control_bar(app, ui));
+            out.textures_delta.clear();
+            fn walk(s: &egui::Shape, v: &mut Vec<(String, Rect)>) {
+                match s {
+                    egui::Shape::Text(t) => v.push((t.galley.text().to_string(), Rect::from_min_size(t.pos, t.galley.size()))),
+                    egui::Shape::Vec(s) => s.iter().for_each(|s| walk(s, v)),
+                    _ => {}
+                }
+            }
+            let mut texts = vec![];
+            out.shapes.iter().for_each(|c| walk(&c.shape, &mut texts));
+            texts
+        };
+        frame(&mut app, vec![]);
+        let texts = frame(&mut app, vec![]);
+        let shown: Vec<&str> = texts.iter().map(|(t, _)| t.as_str()).collect();
+        assert!(shown.contains(&"100 pt") && shown.contains(&"50 pt"), "the top-left corner: {shown:?}");
+        assert!(!shown.contains(&"140 pt"), "not the centre: {shown:?}");
+        // A step up in W keeps the left edge.
+        let label = texts.iter().find(|(t, _)| t == "W:").unwrap().1;
+        let at = pos2(label.right() + 40.0, label.center().y);
+        let press = |pressed| Event::PointerButton { pos: at, button: PointerButton::Primary, pressed, modifiers: Default::default() };
+        frame(&mut app, vec![Event::PointerMoved(at), press(true)]);
+        frame(&mut app, vec![press(false)]);
+        let up = Event::Key { key: egui::Key::ArrowUp, physical_key: None, pressed: true, repeat: false, modifiers: Default::default() };
+        frame(&mut app, vec![up]);
+        let b = app.session.doc().unwrap().doc.node(vectorcraft_doc::NodeId(id)).unwrap().geometric_bounds().unwrap();
+        assert_eq!((b.x0, b.y0, b.width()), (100.0, 50.0, 81.0));
+    }
 
     /// With more tabs than fit, the strip starts late enough to show the active one (#746).
     #[test]

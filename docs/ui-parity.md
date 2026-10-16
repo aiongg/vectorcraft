@@ -126,7 +126,7 @@ tools, never checked side by side) isn't captured row by row.
 | Transform Again, Transform Each, Scale Strokes & Effects, Scale Corners | done | |
 | Transform Objects beside Transform Patterns in the Move, Rotate, Scale, Reflect and Shear dialogs and Transform Each; Reflect across an angle | done | #1448, #1460; off, only the pattern tiles transform; the checkboxes are always enabled (our choice); the link that keeps Transform Each's two scales equal is missing (not documented) |
 | Split Into Grid dialog: number, height or width, gutter and total for rows and columns, Add Guides, Preview | done | #1462; opens at the selection's size; several paths become one grid painted as the topmost one; a typed height or width keeps the gutter and changes the total (our choice) |
-| Reference point locator (nine squares) in Control bar and Transform panel | done | |
+| Reference point locator (nine squares) in Control bar and Transform panel | done | #1573: the Control bar shows it before X/Y/W/H while it has room; both share one reference point |
 | Transform panel, Properties and Control bar X/Y/W/H of the anchor points selected with Direct Selection | done | #1839 (fixes #1824): they show and edit the selected points' bounds; a whole-object selection is unchanged |
 
 ## Nudging, numeric entry and precision
