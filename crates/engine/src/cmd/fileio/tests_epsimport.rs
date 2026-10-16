@@ -79,6 +79,13 @@ fn save_as_eps_reopens_as_the_same_document_and_saves_back() {
     let r = s.execute("document.open", &json!({"path": other})).unwrap();
     assert_eq!(r["restored"], false, "{r}");
     assert_eq!(s.doc().unwrap().path, None);
+    // A new, empty document saves as EPS too (at its artboard) and reopens.
+    let empty = dir.join("empty.eps").to_string_lossy().to_string();
+    s.execute("file.new", &json!({"width": 300, "height": 200})).unwrap();
+    assert_eq!(s.execute("file.saveAs", &json!({"path": empty})).unwrap()["format"], "eps");
+    let r = s.execute("document.open", &json!({"path": empty})).unwrap();
+    assert_eq!(r["restored"], true, "{r}");
+    assert_eq!(objects(&s), 0);
     let _ = std::fs::remove_dir_all(dir);
 }
 

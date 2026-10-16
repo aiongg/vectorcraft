@@ -492,6 +492,10 @@ fn job_for_stamped(s: &Session, st: &DocState, plan: SavePlan, stamped: Option<i
         // A save keeps hidden layers (not displayed) unless told otherwise; exports leave them out.
         params.entry("hiddenLayers").or_insert(Value::Bool(true));
     }
+    if plan.format.id == "eps" {
+        // A save writes the document even with no visible art; an export of nothing fails.
+        params.insert("save".into(), Value::Bool(true));
+    }
     let mut params = Value::Object(params);
     if matches!(plan.format.id, "vectorcraft" | "template") {
         // Not remembered with the options: the preference decides each time it isn't given.

@@ -111,6 +111,9 @@ struct Params {
     thumbnails: Option<bool>,
     cmyk_post_script: Option<bool>,
     compatible_gradients: Option<bool>,
+    /// Set by a save (not an option): a document with no visible art still saves, at its first
+    /// artboard.
+    save: bool,
 }
 
 /// The settings of one EPS export.
@@ -122,6 +125,7 @@ struct Settings {
     thumbnails: bool,
     boards: ArtboardPick,
     use_artboards: Option<bool>,
+    save: bool,
 }
 
 /// An option read by `read`, or an error listing what it may be.
@@ -165,6 +169,7 @@ fn parse(p: &Value) -> Result<Settings> {
         thumbnails: q.thumbnails.unwrap_or(true),
         boards: q.boards,
         use_artboards: q.use_artboards,
+        save: q.save,
     })
 }
 
@@ -197,7 +202,8 @@ fn expanded(cmd: &str, p: &Value, saved: &[super::super::FlattenerPreset]) -> Re
 }
 
 /// The files to write: `(artboard, region, origin)` each — every chosen artboard with its corner
-/// as the origin, or the visible art's bounds with the first artboard's corner.
+/// as the origin, or the visible art's bounds with the first artboard's corner (a save of a
+/// document with none: the first artboard).
 fn pages(doc: &Document, set: &Settings) -> Result<Vec<(Option<usize>, Rect, Point)>> {
     let n = doc.artboards.len();
     let named = set.boards.resolve(n).map_err(|e| bad(C, e))?;
@@ -214,7 +220,9 @@ fn pages(doc: &Document, set: &Settings) -> Result<Vec<(Option<usize>, Rect, Poi
             .map(|b| doc.artboards.get(b).map(|a| (Some(b), a.rect, corner(a.rect))).ok_or_else(|| bad(C, format!("no artboard {}", b + 1))))
             .collect(),
         None => {
-            let art = vectorcraft_render::encode::art_bounds(doc).ok_or_else(|| bad(C, "nothing to export: the document has no visible art"))?;
+            let art = vectorcraft_render::encode::art_bounds(doc)
+                .or_else(|| doc.artboards.first().filter(|_| set.save).map(|a| a.rect))
+                .ok_or_else(|| bad(C, "nothing to export: the document has no visible art"))?;
             Ok(vec![(None, art, doc.artboards.first().map_or(corner(art), |a| corner(a.rect)))])
         }
     }
