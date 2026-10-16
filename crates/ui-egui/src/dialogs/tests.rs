@@ -1147,8 +1147,49 @@ fn polar_grid_dialog_edits_skews_compound_and_fill() {
     assert!((widths[0] - 100.0).abs() < 1e-6 && (widths[1] - 93.75).abs() < 1e-6, "outward: {widths:?}");
     let tips: Vec<f64> = children[3..].iter().map(|n| n.path_data().unwrap().subpaths[0].anchors[1].p.x).collect();
     assert!(tips.iter().all(|x| *x > 60.0), "right of the top divider: {tips:?}");
-    let saved = json!({"concentric": 3, "radial": 4, "concentricSkew": 100.0, "radialSkew": 500.0, "compound": true, "fill": true});
+    let saved = json!({
+        "concentric": 3, "radial": 4, "concentricSkew": 100.0, "radialSkew": 500.0, "compound": true, "fill": true,
+        "width": 100.0, "height": 100.0, "origin": "topLeft",
+    });
     assert_eq!(app.session.tool_options_of("polarGrid"), saved);
+}
+
+/// #1377: a double-click on a grid tool opens its dialog, whose OK sets the tool's options and
+/// draws nothing; a click's dialog then starts from them and puts the chosen reference point at
+/// the click.
+#[test]
+fn grid_tool_options_set_the_defaults_without_drawing() {
+    use vectorcraft_doc::NodeId;
+    for kind in ["polarGrid", "rectangularGrid"] {
+        let mut app = app();
+        let before = app.session.doc().unwrap().doc.clone();
+        assert_eq!(crate::toolbar::open_options(&mut app, kind).unwrap()["dialog"], kind);
+        let text = crate::tests_labels::painted_text(&mut app, |app, ui| show(app, ui.ctx()));
+        assert!(text.contains("Reference Point\n"), "{text}");
+        let d = app.ui.dialog.as_mut().unwrap();
+        assert!(!d.fields.contains_key("x"), "{:?}", d.fields);
+        let count = if kind == "polarGrid" { "concentric" } else { "rows" };
+        for (key, value) in [("width", json!("40 pt")), ("height", json!("30 pt")), (count, json!(2)), ("origin", json!("bottomRight"))] {
+            d.fields.insert(key.into(), value);
+        }
+        confirm(&mut app).unwrap();
+        assert!(app.ui.dialog.is_none());
+        assert_eq!(app.session.doc().unwrap().doc, before, "{kind}: no grid drawn");
+        let options = app.session.tool_options_of(kind);
+        assert_eq!(
+            (options["width"].clone(), options["height"].clone(), options["origin"].clone()),
+            (json!(40.0), json!(30.0), json!("bottomRight"))
+        );
+        assert_eq!(options[count], json!(2));
+        // A click's dialog starts from them and grows the grid up and left from the click.
+        open_tool_dialog(&mut app, kind, json!({"x": 150, "y": 120}));
+        let d = app.ui.dialog.as_ref().unwrap();
+        assert_eq!((d.fields["width"].clone(), d.fields["origin"].clone()), (json!("40 pt"), json!("bottomRight")));
+        let result = confirm(&mut app).unwrap();
+        let bounds = app.session.doc().unwrap().doc.node(NodeId(result["id"].as_u64().unwrap())).unwrap().geometric_bounds().unwrap();
+        assert!((bounds.x0 - 110.0).abs() < 1e-6 && (bounds.y0 - 90.0).abs() < 1e-6, "{kind}: {bounds:?}");
+        assert!((bounds.x1 - 150.0).abs() < 1e-6 && (bounds.y1 - 120.0).abs() < 1e-6, "{kind}: {bounds:?}");
+    }
 }
 
 #[test]

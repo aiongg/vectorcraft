@@ -16,11 +16,17 @@ pub fn open_tool_dialog(app: &mut VectorcraftApp, kind: &str, p: Value) {
         "polygon" => Dialog::new(kind, json!({"x": x, "y": y, "radius": "50 pt", "sides": 6})),
         "star" => Dialog::new(kind, json!({"x": x, "y": y, "radius1": "50 pt", "radius2": "25 pt", "points": 5})),
         "lineSegment" => Dialog::new(kind, json!({"x": x, "y": y, "length": "100 pt", "angle": 0})),
-        // The grids: the tool's stored options (divider counts and skews, switches) at the default size.
+        // The grids: the tool's stored options (Default Size, reference point, divider counts and
+        // skews, switches). With no click point (a double-click on the tool), OK only sets them.
         "rectangularGrid" | "polarGrid" => {
             let mut fields = app.session.tool_options_of(kind);
-            for (key, value) in [("x", json!(x)), ("y", json!(y)), ("width", json!("100 pt")), ("height", json!("100 pt"))] {
-                fields[key] = value;
+            for key in ["width", "height"] {
+                let size = fields.get(key).and_then(Value::as_f64).unwrap_or(100.0);
+                fields[key] = json!(format!("{size} pt"));
+            }
+            if p.get("x").is_some() {
+                fields["x"] = json!(x);
+                fields["y"] = json!(y);
             }
             Dialog::new(kind, fields)
         }
