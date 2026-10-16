@@ -296,7 +296,7 @@ fn ids_json(ids: &[NodeId]) -> Value {
 
 /// Explicit `ids` (in paint order) or the selected roots.
 fn roots_param(s: &Session, p: &Value) -> Result<Vec<NodeId>> {
-    if let Some(ids) = ids_param(p, "ids") {
+    if let Some(ids) = ids_param(p, "ids")? {
         let st = s.doc()?;
         for id in &ids {
             if st.doc.node(*id).is_none() {
@@ -441,7 +441,7 @@ fn starts_param(p: &Value, roots: &[NodeId]) -> Result<Vec<(NodeId, u32)>> {
     const C: &str = "object.blend.make";
     let Some(v) = p.get("starts").filter(|v| !v.is_null()) else { return Ok(vec![]) };
     let list = v.as_array().ok_or_else(|| bad(C, "`starts` must be an array of anchor indices (or nulls)"))?;
-    let owners = ids_param(p, "ids").unwrap_or_else(|| roots.to_vec());
+    let owners = ids_param(p, "ids")?.unwrap_or_else(|| roots.to_vec());
     let mut out = vec![];
     for (id, a) in owners.iter().zip(list) {
         if a.is_null() {
@@ -597,7 +597,7 @@ fn edit_spine<T>(
     label: &str,
     f: impl FnOnce(&mut vectorcraft_geom::SubPath, &mut Vec<usize>, &mut [Arc<Node>]) -> Result<T>,
 ) -> Result<T> {
-    let id = match id_param(p, "id") {
+    let id = match id_param(p, "id")? {
         Some(id) => id,
         None => *selected_of(s, is_blend).first().ok_or_else(|| bad(cmd, "select a blend or give `id`"))?,
     };
@@ -1298,7 +1298,7 @@ fn env_edit_contents(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn env_set_mesh_point(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "object.envelope.setMeshPoint";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing `id`"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing `id`"))?;
     let index = f64_req(p, "index", C)? as usize;
     let q = Point::new(f64_req(p, "x", C)?, f64_req(p, "y", C)?);
     let handle = handle_param(p, C)?;
@@ -1426,7 +1426,7 @@ fn image_mesh(d: &Document, im: &ImageObject, rows: u32, cols: u32) -> Option<Gr
 /// Run `f` on the gradient mesh `p.id` (one undo step `label`); with `envelopes`, a mesh
 /// envelope's grid too (its points and handles are written back: editing fills in the handles).
 fn with_mesh<T>(s: &mut Session, p: &Value, cmd: &str, label: &str, envelopes: bool, f: impl FnOnce(&mut GradientMesh) -> Result<T>) -> Result<T> {
-    let id = id_param(p, "id").ok_or_else(|| bad(cmd, "missing `id`"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(cmd, "missing `id`"))?;
     let c = cmd.to_string();
     s.edit(label, move |d, _| match d.node_mut(id).map(|n| &mut n.kind) {
         Some(NodeKind::Mesh(m)) => f(m),

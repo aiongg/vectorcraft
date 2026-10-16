@@ -579,7 +579,7 @@ fn info(_: &mut Session, p: &Value) -> Result<Value> {
 pub(crate) fn image_info(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "image.info";
     let st = s.doc()?;
-    let id = match (id_param(p, "id"), &st.selection.objects[..]) {
+    let id = match (id_param(p, "id")?, &st.selection.objects[..]) {
         (Some(id), _) => id,
         (None, [id]) => *id,
         _ => return Err(bad(C, "select one image or pass id")),

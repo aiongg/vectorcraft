@@ -149,7 +149,7 @@ fn paintable(doc: &Document) -> Vec<NodeId> {
 }
 
 fn magic_wand(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("select.magicWand", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("select.magicWand", "missing id"))?;
     let st = s.doc()?;
     let reference = st.doc.node(id).ok_or(EngineError::NoNode(id))?.clone();
     let w = s.menu.wand.clone();

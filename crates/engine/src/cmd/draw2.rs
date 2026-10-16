@@ -548,7 +548,7 @@ fn freehand(s: &mut Session, p: &Value) -> Result<Value> {
     let brush = str_param(p, "style") == Some("brush");
     let keep_selected = bool_or(p, "keepSelected", true);
     if let Some(ext) = p.get("extend").filter(|v| !v.is_null()) {
-        let id = id_param(ext, "id").ok_or_else(|| bad(C, "extend needs id"))?;
+        let id = id_param(ext, "id")?.ok_or_else(|| bad(C, "extend needs id"))?;
         let at_start = str_param(ext, "end") == Some("start");
         let (pd, _) = path_of(&s.doc()?.doc, id)?;
         let si = pd.subpaths.iter().rposition(|s| !s.closed && !s.anchors.is_empty()).ok_or_else(|| bad(C, "path has no open end"))?;
@@ -651,7 +651,7 @@ fn curvature(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(C, "need at least one point"));
     }
     let sp = vectorcraft_tools::draw2::curvature_spline(&pts, bool_or(p, "closed", false));
-    if let Some(id) = id_param(p, "id") {
+    if let Some(id) = id_param(p, "id")? {
         s.edit("Curvature", |d, sel| {
             *path_mut(d, id)? = PathData::single(sp);
             sel.set([id]);
@@ -678,7 +678,7 @@ enum CurvatureOp {
 fn curvature_edit(s: &mut Session, p: &Value) -> Result<Value> {
     use vectorcraft_tools::draw2::{EndCurve, curvature_close, curvature_extend, curvature_insert, curvature_move};
     const C: &str = "path.curvatureEdit";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let si = p.get("subpath").and_then(Value::as_u64).unwrap_or(0) as usize;
     let at = match (p.get("x").and_then(Value::as_f64), p.get("y").and_then(Value::as_f64)) {
         (Some(x), Some(y)) if x.is_finite() && y.is_finite() => Some(Point::new(x, y)),
@@ -742,7 +742,7 @@ fn curvature_edit(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn remove_anchor(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "path.removeAnchor";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let si = p.get("subpath").and_then(Value::as_u64).unwrap_or(0) as usize;
     let ai = usize_req(p, "anchor", C)?;
     let removed = s.edit("Delete Anchor Point", |d, sel| {
@@ -849,7 +849,7 @@ fn remove_anchors_of(
 
 fn convert_anchor(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "path.convertAnchor";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let si = p.get("subpath").and_then(Value::as_u64).unwrap_or(0) as usize;
     let ai = usize_req(p, "anchor", C)?;
     let smooth = str_param(p, "to") == Some("smooth");
@@ -881,7 +881,7 @@ fn convert_anchor(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn reshape_segment(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "path.reshapeSegment";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let si = p.get("subpath").and_then(Value::as_u64).unwrap_or(0) as usize;
     let seg = usize_req(p, "segment", C)?;
     let t = f64_or(p, "t", 0.5).clamp(0.05, 0.95);
@@ -904,7 +904,7 @@ fn reshape_segment(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn split(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "path.split";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let si = p.get("subpath").and_then(Value::as_u64).unwrap_or(0) as usize;
     let anchor = p.get("anchor").and_then(Value::as_u64).map(|v| v as usize);
     let seg = p.get("segment").and_then(Value::as_u64).map(|v| v as usize);

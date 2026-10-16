@@ -294,7 +294,7 @@ fn same_points(a: Option<&WidthProfile>, b: Option<&WidthProfile>) -> bool {
 
 fn width_point_set(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "stroke.widthPoint.set";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let t = f64_req(p, "t", C)?.clamp(0.0, 1.0);
     let (left, right) = (f64_req(p, "left", C)?, f64_req(p, "right", C)?);
     if !(left.is_finite() && right.is_finite()) || left < 0.0 || right < 0.0 || left.max(right) > 1.0e5 {
@@ -351,7 +351,7 @@ fn width_point_set(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn width_point_copy(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "stroke.widthPoint.copy";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let t = f64_req(p, "t", C)?.clamp(0.0, 1.0);
     // When the profile comes out as it was (the copy replaces a side of a discontinuous point that has
     // its widths already), the document and its undo history stay as they are.
@@ -371,7 +371,7 @@ fn width_point_copy(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn width_point_remove(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "stroke.widthPoint.remove";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let indices = match (p.get("indices"), p.get("index")) {
         (Some(a), _) => point_indices(a),
         (None, Some(i)) => point_indices(&json!([i])),
@@ -635,7 +635,7 @@ fn liquify(s: &mut Session, p: &Value) -> Result<Value> {
     if pts.iter().any(|(q, f)| !q.x.is_finite() || !q.y.is_finite() || !f.is_finite()) {
         return Err(bad(C, "points must be finite"));
     }
-    let roots = match ids_param(p, "ids").or_else(|| id_param(p, "id").map(|i| vec![i])) {
+    let roots = match ids_param(p, "ids")?.or(id_param(p, "id")?.map(|i| vec![i])) {
         Some(v) => v,
         None => s.doc()?.selection.objects.clone(),
     };
@@ -685,7 +685,7 @@ fn liquify(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The objects a Puppet Warp command works on: `id`/`ids`, else `default`.
 fn puppet_ids(p: &Value, default: impl FnOnce() -> Result<Vec<NodeId>>) -> Result<Vec<NodeId>> {
-    let ids = match ids_param(p, "ids").or_else(|| id_param(p, "id").map(|i| vec![i])) {
+    let ids = match ids_param(p, "ids")?.or(id_param(p, "id")?.map(|i| vec![i])) {
         Some(v) => v,
         None => default()?,
     };
@@ -846,7 +846,7 @@ fn plane_param(g: &PerspectiveGrid, p: &Value, cmd: &str) -> Result<Plane> {
 }
 
 fn roots(s: &Session, p: &Value) -> Result<Vec<NodeId>> {
-    match ids_param(p, "ids").or_else(|| id_param(p, "id").map(|i| vec![i])) {
+    match ids_param(p, "ids")?.or(id_param(p, "id")?.map(|i| vec![i])) {
         Some(v) => Ok(outermost(&s.doc()?.doc, v)),
         None => selected_roots(s),
     }
@@ -1200,7 +1200,7 @@ fn plane_move(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn plane_match(s: &mut Session, p: &Value) -> Result<Value> {
     let st = s.doc()?;
-    let id = id_param(p, "id")
+    let id = id_param(p, "id")?
         .or_else(|| st.selection.objects.first().copied())
         .ok_or_else(|| EngineError::Other("select an object in perspective".into()))?;
     let mut g = grid_of(&st.doc);
@@ -1307,8 +1307,9 @@ pub fn perspective_click(s: &Session, cmd: &str, params: &Value, at: Point) -> O
 /// mode, to be edited; exiting isolation projects it again ([`finish_edit_text`]).
 fn edit_text(s: &mut Session, p: &Value) -> Result<Value> {
     let st = s.doc()?;
-    let id =
-        id_param(p, "id").or_else(|| st.selection.objects.first().copied()).ok_or_else(|| EngineError::Other("select type in perspective".into()))?;
+    let id = id_param(p, "id")?
+        .or_else(|| st.selection.objects.first().copied())
+        .ok_or_else(|| EngineError::Other("select type in perspective".into()))?;
     if !st.doc.node(id).is_some_and(|n| matches!(n.kind, NodeKind::Text(_)) && n.projection().is_some()) {
         return Err(EngineError::Other("select type in perspective".into()));
     }

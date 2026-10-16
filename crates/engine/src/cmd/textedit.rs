@@ -177,7 +177,7 @@ fn range_of(p: &Value, len: usize) -> (usize, usize) {
 
 fn edit_range(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "text.editRange";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing `id`"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing `id`"))?;
     let t = text_ref(s, id)?;
     let len = edit::runs_len(&t.runs);
     let (a, b) = range_of(p, len);
@@ -206,7 +206,7 @@ fn edit_range(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn get_range(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("text.getRange", "missing `id`"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("text.getRange", "missing `id`"))?;
     let t = text_ref(s, id)?;
     let len = edit::runs_len(&t.runs);
     let (a, b) = range_of(p, len);
@@ -552,7 +552,7 @@ fn set_range_style(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn create_in_path(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "text.createInPath";
-    let pid = id_param(p, "path").ok_or_else(|| bad(C, "missing `path` (a path object id)"))?;
+    let pid = id_param(p, "path")?.ok_or_else(|| bad(C, "missing `path` (a path object id)"))?;
     let on_path = match str_param(p, "mode").unwrap_or("area") {
         "area" => false,
         "onPath" | "path" => true,
@@ -645,7 +645,7 @@ fn type_ranges(
     at_caret: impl Fn(&str, usize) -> Option<(usize, usize)>,
 ) -> Result<Vec<(NodeId, usize, usize, bool)>> {
     // (text, its range; None: all of it).
-    let targets: Vec<(NodeId, Option<(usize, usize)>)> = match id_param(p, "id") {
+    let targets: Vec<(NodeId, Option<(usize, usize)>)> = match id_param(p, "id")? {
         Some(id) => vec![(id, Some(range_of(p, edit::runs_len(&text_ref(s, id)?.runs))))],
         None => {
             let editing = editing_range(s)?.filter(|_| p.get("ids").filter(|v| !v.is_null()).is_none());
@@ -854,7 +854,7 @@ fn fit_headline(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn discard_empty(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "text.discardEmpty";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing `id`"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing `id`"))?;
     if edit::runs_len(&text_ref(s, id)?.runs) > 0 {
         return Ok(json!({"removed": false}));
     }

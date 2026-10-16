@@ -463,8 +463,8 @@ fn clear(n: &mut Node) {
 
 fn transfer(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "appearance.transfer";
-    let source = id_param(p, "source").ok_or_else(|| bad(C, "missing `source` id"))?;
-    let target = id_param(p, "target").ok_or_else(|| bad(C, "missing `target` id"))?;
+    let source = id_param(p, "source")?.ok_or_else(|| bad(C, "missing `source` id"))?;
+    let target = id_param(p, "target")?.ok_or_else(|| bad(C, "missing `target` id"))?;
     if source == target {
         return Err(bad(C, "`source` and `target` are the same object"));
     }
@@ -741,10 +741,10 @@ fn target_contents(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn copy_from(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "appearance.copyFrom";
-    let clicked = id_param(p, "source").ok_or_else(|| bad(C, "missing `source` id"))?;
+    let clicked = id_param(p, "source")?.ok_or_else(|| bad(C, "missing `source` id"))?;
     let (reverse, append) = (bool_or(p, "reverse", false), bool_or(p, "append", false));
     let attrs = s.prefs.eyedropper.attrs(p).map_err(|e| bad(C, e))?;
-    let selected = match ids_param(p, "ids") {
+    let selected = match ids_param(p, "ids")? {
         Some(v) => outermost(&s.doc()?.doc, v),
         None => selected_roots(s)?,
     };

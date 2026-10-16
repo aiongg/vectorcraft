@@ -325,7 +325,7 @@ fn release(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "layer.releaseToLayers";
     let build = bool_or(p, "build", false);
     let st = s.doc()?;
-    let id = match id_param(p, "id") {
+    let id = match id_param(p, "id")? {
         Some(id) => id,
         None => match st.highlighted_rows().as_slice() {
             [id] => *id,
@@ -420,7 +420,7 @@ fn reverse(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn locate(s: &mut Session, p: &Value) -> Result<Value> {
     let st = s.doc_mut()?;
-    let id = id_param(p, "id").or_else(|| st.selection.objects.last().copied()).ok_or_else(|| bad("layer.locate", "nothing selected"))?;
+    let id = id_param(p, "id")?.or_else(|| st.selection.objects.last().copied()).ok_or_else(|| bad("layer.locate", "nothing selected"))?;
     let ancestry = st.doc.ancestry(id).ok_or(EngineError::NoNode(id))?;
     st.layer_rows = vec![id];
     st.revision += 1;

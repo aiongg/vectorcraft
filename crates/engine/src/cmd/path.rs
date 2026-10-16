@@ -129,7 +129,7 @@ pub(super) fn path_mut(d: &mut vectorcraft_doc::Document, id: NodeId) -> Result<
 }
 
 fn append_anchor(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("path.appendAnchor", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("path.appendAnchor", "missing id"))?;
     let a = anchor_from_json(p, "path.appendAnchor")?;
     s.edit("Pen", |d, sel| {
         let path = path_mut(d, id)?;
@@ -147,7 +147,7 @@ fn append_anchor(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn close(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("path.close", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("path.close", "missing id"))?;
     let h_in = point_param(p, "in");
     let independent = bool_or(p, "independent", false);
     s.edit("Close Path", |d, sel| {
@@ -214,7 +214,7 @@ pub(crate) fn transform_anchors(s: &mut Session, label: &str, xf: vectorcraft_ge
 }
 
 fn set_handle(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("path.setHandle", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("path.setHandle", "missing id"))?;
     let si = p.get("subpath").and_then(Value::as_u64).unwrap_or(0) as usize;
     let ai = p.get("anchor").and_then(Value::as_u64).ok_or_else(|| bad("path.setHandle", "missing anchor"))? as usize;
     let out = str_param(p, "which") != Some("in");
@@ -230,7 +230,7 @@ fn set_handle(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn set_anchors(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("path.setAnchors", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("path.setAnchors", "missing id"))?;
     let subs = p.get("subpaths").and_then(Value::as_array).ok_or_else(|| bad("path.setAnchors", "missing subpaths"))?;
     let data = PathData::new(
         subs.iter()
@@ -343,7 +343,7 @@ fn merge_coincident(sp: &mut SubPath, picked: impl Fn(usize) -> bool) -> usize {
 
 fn join(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "path.join";
-    let ids = match ids_param(p, "ids") {
+    let ids = match ids_param(p, "ids")? {
         Some(ids) => {
             let st = s.doc()?;
             if let Some(id) = ids.iter().find(|id| !matches!(st.doc.node(**id).map(|n| &n.kind), Some(NodeKind::Path { .. }))) {
@@ -667,7 +667,7 @@ fn open_run(mut anchors: Vec<vectorcraft_geom::Anchor>) -> Option<SubPath> {
 }
 
 fn reshape(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("path.reshape", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("path.reshape", "missing id"))?;
     let at = Point::new(f64_req(p, "x", "path.reshape")?, f64_req(p, "y", "path.reshape")?);
     let delta = Vec2::new(f64_or(p, "dx", 0.0), f64_or(p, "dy", 0.0));
     let tol = f64_or(p, "tol", 3.0).max(0.0);
@@ -705,7 +705,7 @@ fn reshape(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn insert_anchor(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("path.insertAnchor", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("path.insertAnchor", "missing id"))?;
     let si = p.get("subpath").and_then(Value::as_u64).unwrap_or(0) as usize;
     let seg = p.get("segment").and_then(Value::as_u64).ok_or_else(|| bad("path.insertAnchor", "missing segment"))? as usize;
     let t = f64_or(p, "t", 0.5).clamp(0.0, 1.0);

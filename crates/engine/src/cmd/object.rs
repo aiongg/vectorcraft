@@ -368,7 +368,7 @@ pub(crate) fn apply_transform(s: &mut Session, label: &str, ids: Vec<NodeId>, xf
     let c = xf.as_coeffs();
     let is_translation = (c[0] - 1.0).abs() < 1e-9 && c[1].abs() < 1e-9 && c[2].abs() < 1e-9 && (c[3] - 1.0).abs() < 1e-9;
     let delta = Vec2::new(c[4], c[5]);
-    let with_guides = objects && ids_param(p, "ids").is_none() && is_translation;
+    let with_guides = objects && ids_param(p, "ids")?.is_none() && is_translation;
     let has_guides = with_guides && !s.doc()?.selection.guides.is_empty();
     // A transform of ids that name no object, or an identity transform without a copy, moves
     // nothing: the document and its undo history stay as they are, and Transform Again repeats it.
@@ -491,7 +491,7 @@ fn resize_type_area(n: &mut Node, xf: Affine) -> bool {
 
 fn transform(s: &mut Session, p: &Value) -> Result<Value> {
     let m = matrix_param(p, "matrix").ok_or_else(|| bad("object.transform", "missing matrix [a,b,c,d,e,f]"))?;
-    let (ids, anchors) = match ids_param(p, "ids") {
+    let (ids, anchors) = match ids_param(p, "ids")? {
         Some(v) => (outermost(&s.doc()?.doc, v), false),
         None => (selected_roots_to_transform(s)?, bool_or(p, "anchors", false)),
     };
@@ -1044,7 +1044,7 @@ fn clip_edit(s: &mut Session, mask: bool) -> Result<Value> {
 }
 
 fn isolate(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id")
+    let id = id_param(p, "id")?
         .or_else(|| s.active().and_then(|d| d.selection.objects.first().copied()))
         .ok_or_else(|| bad("object.isolate", "missing id"))?;
     let st = s.doc_mut()?;

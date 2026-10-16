@@ -168,7 +168,7 @@ fn make(s: &mut Session, p: &Value) -> Result<Value> {
     if d.mask_edit.is_some() {
         return Err(bad(C, "stop editing the opacity mask first"));
     }
-    let ids = match ids_param(p, "ids") {
+    let ids = match ids_param(p, "ids")? {
         Some(ids) => {
             if let Some(id) = ids.iter().find(|id| d.node(**id).is_none()) {
                 return Err(EngineError::NoNode(*id));

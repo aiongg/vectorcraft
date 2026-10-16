@@ -2447,6 +2447,38 @@ fn given_targets_are_used_as_given_and_range_style_takes_the_selected_type() {
     assert!(s.execute("text.setRangeStyle", &json!({"id": "two", "size": 40})).is_err());
 }
 
+/// #785: an `id` or `ids` entry that is present but isn't an object id fails, naming the param,
+/// and leaves the document and selection as they were; an absent one still means the selection.
+#[test]
+fn bad_object_ids_fail_without_falling_back_to_the_selection() {
+    let mut s = session();
+    let a = rect(&mut s, 10.0, 10.0, 30.0, 20.0);
+    let b = rect(&mut s, 50.0, 10.0, 30.0, 20.0);
+    s.execute("select.set", &json!({"ids": [b.0]})).unwrap();
+    let doc = s.doc().unwrap().doc.clone();
+    let move_by = json!([1, 0, 0, 1, 10, 0]);
+    for (cmd, p, key) in [
+        ("object.transform", json!({"ids": [a.0, "x"], "matrix": move_by}), "`ids`"),
+        ("object.transform", json!({"ids": "x", "matrix": move_by}), "`ids`"),
+        ("paint.invert", json!({"ids": [a.0, 1.5]}), "`ids`"),
+        ("object.isolate", json!({"id": "abc"}), "`id`"),
+        ("object.isolate", json!({"id": -1}), "`id`"),
+        ("graphicStyle.new", json!({"id": "$1.id"}), "`id`"),
+    ] {
+        let e = s.execute(cmd, &p).unwrap_err().to_string();
+        assert!(e.contains(key), "{cmd} {p}: {e}");
+        let st = s.doc().unwrap();
+        assert!(st.doc == doc, "{cmd} {p} changed the document");
+        assert_eq!(st.selection.objects, vec![b], "{cmd} {p}");
+        assert_eq!(st.isolation, None, "{cmd} {p}");
+    }
+    // Absent (or null) still means the selection.
+    s.execute("object.transform", &json!({"ids": null, "matrix": move_by})).unwrap();
+    let st = s.doc().unwrap();
+    assert!(st.doc.node(a) == doc.node(a), "a isn't selected");
+    assert!(st.doc.node(b) != doc.node(b), "b is selected and moves");
+}
+
 #[test]
 fn malformed_anchor_selection_never_replaces_or_partially_changes_selection() {
     let mut s = session();

@@ -334,7 +334,7 @@ pub(crate) fn recolor(s: &mut Session, p: &Value, label: &str, f: &dyn Fn(Color)
 
 /// Run `pass` on the `ids` param's objects (default: the selection) as one undo step.
 fn run_pass(s: &mut Session, p: &Value, label: &str, pass: Recolor) -> Result<Value> {
-    let ids = match ids_param(p, "ids") {
+    let ids = match ids_param(p, "ids")? {
         Some(v) => v,
         None => selected_roots(s)?,
     };

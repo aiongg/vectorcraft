@@ -83,7 +83,7 @@ fn enter(s: &mut Session, p: &Value) -> Result<Value> {
     if st.doc.mask_edit.is_some() {
         return Err(bad(C, "already editing an opacity mask"));
     }
-    let id = id_param(p, "id").or_else(|| first_masked(st)).ok_or_else(|| bad(C, "select an object with an opacity mask"))?;
+    let id = id_param(p, "id")?.or_else(|| first_masked(st)).ok_or_else(|| bad(C, "select an object with an opacity mask"))?;
     let layer = start(s, id)?;
     Ok(json!({ "layer": layer.0 }))
 }
@@ -110,7 +110,7 @@ fn view_mask(s: &mut Session, p: &Value) -> Result<Value> {
         st.revision += 1;
         return Ok(json!({ "on": false, "id": id.map(|i| i.0) }));
     }
-    let id = id_param(p, "id").or(editing).or_else(|| first_masked(st)).ok_or_else(|| bad(C, "select an object with an opacity mask"))?;
+    let id = id_param(p, "id")?.or(editing).or_else(|| first_masked(st)).ok_or_else(|| bad(C, "select an object with an opacity mask"))?;
     match editing {
         Some(e) if e != id => return Err(bad(C, "already editing another object's opacity mask")),
         Some(_) => {}
