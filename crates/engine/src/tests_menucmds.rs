@@ -1129,7 +1129,7 @@ fn select_from_none(s: &mut Session, c: &str) -> Vec<NodeId> {
 }
 
 /// In isolation mode Select All, All on Active Artboard and Inverse select nothing while the
-/// isolated group is hidden or locked, or the layer it is on is hidden or a template.
+/// isolated group is hidden or locked, or the layer it is on is hidden or a (locked) template.
 #[test]
 fn select_all_leaves_out_an_isolated_group_hidden_or_locked_since() {
     let mut s = session();
@@ -1147,8 +1147,7 @@ fn select_all_leaves_out_an_isolated_group_hidden_or_locked_since() {
         ("object.setProps", json!({"ids": [g.0], "visible": false}), json!({"ids": [g.0], "visible": true})),
         ("object.setProps", json!({"ids": [g.0], "locked": true}), json!({"ids": [g.0], "locked": false})),
         ("layer.setProps", json!({"ids": [layer.0], "visible": false}), json!({"ids": [layer.0], "visible": true})),
-        // A template layer that has been unlocked again.
-        ("layer.setProps", json!({"ids": [layer.0], "template": true, "locked": false}), json!({"ids": [layer.0], "template": false})),
+        ("layer.setProps", json!({"ids": [layer.0], "template": true}), json!({"ids": [layer.0], "template": false})),
     ];
     for (cmd, on, off) in changes {
         s.execute(cmd, &on).unwrap();

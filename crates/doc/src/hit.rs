@@ -101,7 +101,7 @@ pub fn objects_at(doc: &Document, p: Point, opt: HitOptions, scope: Option<NodeI
         if !layer.is_layer() {
             return objects_at_repeated(doc, p, opt, scope);
         }
-        if !layer.visible || layer.locked || layer.is_template() || doc.pattern_edit.as_ref().is_some_and(|e| e.layer != layer.id) {
+        if !layer.visible || layer.locked || doc.pattern_edit.as_ref().is_some_and(|e| e.layer != layer.id) {
             continue;
         }
         if !objects_at_layer(layer, p, opt, &symbols, &mut tops, &mut seen) {
@@ -174,8 +174,7 @@ pub const MAX_LOCKED_AT: usize = 20;
 
 /// The locked objects under `p`, topmost first, at most [`MAX_LOCKED_AT`]: each object whose own
 /// lock is on and that a click at `p` would hit if it were not locked. A locked group is listed,
-/// not what it holds. Hidden objects and everything on hidden, locked and template layers are left
-/// out. While a pattern is edited only its tile layer is searched, and in isolation mode
+/// not what it holds. Hidden objects and everything on hidden and locked layers are left out. While a pattern is edited only its tile layer is searched, and in isolation mode
 /// (`opt.scope`) only what is inside the isolated group or object.
 pub fn locked_objects_at(doc: &Document, p: Point, opt: HitOptions) -> Vec<NodeId> {
     let symbols = doc.symbol_boxes();
@@ -191,7 +190,7 @@ pub fn locked_objects_at(doc: &Document, p: Point, opt: HitOptions) -> Vec<NodeI
         return out;
     }
     for layer in doc.layers.iter().rev() {
-        if !layer.visible || layer.locked || layer.is_template() || doc.pattern_edit.as_ref().is_some_and(|e| e.layer != layer.id) {
+        if !layer.visible || layer.locked || doc.pattern_edit.as_ref().is_some_and(|e| e.layer != layer.id) {
             continue;
         }
         let opt = if matches!(layer.kind, NodeKind::Layer { preview: false, .. }) { HitOptions { outline: true, ..opt } } else { opt };
@@ -212,7 +211,7 @@ fn locked_children(parent: &Node, p: Point, opt: HitOptions, symbols: &SymbolBox
             return;
         }
         let Some(c) = children.get(i) else { continue };
-        if !may_hit(parent, i, c, p, opt, symbols, false) || c.is_layer() && (c.locked || c.is_template()) {
+        if !may_hit(parent, i, c, p, opt, symbols, false) || c.is_layer() && c.locked {
             continue;
         }
         if c.locked {
@@ -269,7 +268,7 @@ fn hit_test_skipping(doc: &Document, p: Point, opt: HitOptions, skip: &dyn Fn(No
     }
     let mut chain = Vec::new();
     for layer in doc.layers.iter().rev() {
-        if !layer.visible || editable_only && (layer.locked || layer.is_template()) {
+        if !layer.visible || editable_only && layer.locked {
             continue;
         }
         // Pattern editing mode: only the tile art is editable.
@@ -309,8 +308,8 @@ fn may_hit(parent: &Node, i: usize, c: &Node, p: Point, opt: HitOptions, symbols
     if parent.extras().shaper.is_some() && (i == 0) != source_isolated(parent) {
         return false;
     }
-    // Read-only samples can read locked/template art; hidden art never participates.
-    if !c.visible || editable_only && (c.locked || c.is_template()) {
+    // Read-only samples can read locked art; hidden art never participates.
+    if !c.visible || editable_only && c.locked {
         return false;
     }
     // (An envelope's content sits where it was, not where the envelope draws it.)
@@ -474,12 +473,12 @@ pub fn marquee(doc: &Document, r: Rect, scope: Option<NodeId>, leaves: bool) -> 
             // A single object isolated: only it.
             None => doc.parent_of(s.id).and_then(|p| doc.node(p)).and_then(Node::children).into_iter().flatten().filter(|c| c.id == s.id).collect(),
         },
-        // The objects of the layers, looking through sublayers (hidden, locked and template ones
-        // are left out).
+        // The objects of the layers, looking through sublayers (hidden and locked ones are left
+        // out).
         None => doc
             .layers
             .iter()
-            .filter(|l| l.visible && !l.locked && !l.is_template() && doc.pattern_edit.as_ref().is_none_or(|e| e.layer == l.id))
+            .filter(|l| l.visible && !l.locked && doc.pattern_edit.as_ref().is_none_or(|e| e.layer == l.id))
             .flat_map(|l| layer_objects(l))
             .collect(),
     };
@@ -487,7 +486,7 @@ pub fn marquee(doc: &Document, r: Rect, scope: Option<NodeId>, leaves: bool) -> 
         let mut out = vec![];
         for c in l.children().into_iter().flatten() {
             if c.is_layer() {
-                if c.visible && !c.locked && !c.is_template() {
+                if c.visible && !c.locked {
                     out.extend(layer_objects(c));
                 }
             } else {
@@ -614,7 +613,8 @@ mod tests {
     }
 
     /// Art in a sublayer is an object of its own: a click or a marquee takes it, not the
-    /// sublayer; hidden, locked and template sublayers block both.
+    /// sublayer; hidden and locked sublayers block both, and a template sublayer only while it is
+    /// locked.
     #[test]
     fn sublayers_are_not_objects() {
         let mut d = Document::new(200.0, 200.0);
@@ -638,21 +638,21 @@ mod tests {
         assert_eq!(d.layer_containing(a), Some(inner));
         assert_eq!(d.layer_color(a), crate::LayerColor::Preset(3).rgb(), "the sublayer's own colour");
         assert_eq!(d.selectable_art(), vec![a, g]);
-        for f in [
-            |n: &mut Node| n.visible = false,
-            |n: &mut Node| n.locked = true,
-            |n: &mut Node| {
-                if let NodeKind::Layer { template, .. } = &mut n.kind {
-                    *template = true;
-                }
-            },
-        ] {
+        for f in [|n: &mut Node| n.visible = false, |n: &mut Node| n.locked = true] {
             let mut d2 = d.clone();
             f(d2.node_mut(inner).unwrap());
             assert!(hit_test(&d2, Point::new(10.0, 10.0), HitOptions::default()).is_none());
             assert_eq!(marquee(&d2, all, None, false), vec![g]);
             assert_eq!(d2.selectable_art(), vec![g]);
         }
+        // An unlocked template sublayer takes clicks like any other.
+        let mut d2 = d.clone();
+        if let NodeKind::Layer { template, .. } = &mut d2.node_mut(inner).unwrap().kind {
+            *template = true;
+        }
+        assert_eq!(hit_test(&d2, Point::new(10.0, 10.0), HitOptions::default()).map(|h| h.leaf), Some(a));
+        assert_eq!(marquee(&d2, all, None, false), vec![a, g]);
+        assert_eq!(d2.selectable_art(), vec![a, g]);
         // A sublayer whose Preview is off is clicked in outline: its fill no longer hits.
         if let NodeKind::Layer { preview, .. } = &mut d.node_mut(inner).unwrap().kind {
             *preview = false;
