@@ -268,7 +268,9 @@ pub fn twist(path: &PathData, b: Rect, angle: f64) -> PathData {
 const ZIGZAG_ARCLEN_ACCURACY: f64 = 1e-4;
 
 /// Zig Zag: `ridges` extra points per segment, evenly spaced along its length and alternately
-/// displaced along the normal.
+/// displaced along the normal. Smooth points get handles along the base path, a third of the
+/// ridge spacing long, so the wave curves all along its flanks like a sine (Catmull-Rom tangents
+/// grow with the amplitude on steep ridges and flatten the peaks into fillets, #2343).
 pub fn zig_zag(path: &PathData, b: Rect, p: &Value) -> PathData {
     let size = num(p, "size", 10.0).clamp(-1e4, 1e4);
     let amp = if flag(p, "relative", false) { size / 100.0 * mean_size(b) } else { size };
@@ -278,12 +280,16 @@ pub fn zig_zag(path: &PathData, b: Rect, p: &Value) -> PathData {
     for sp in &path.subpaths {
         let segs = sp.segment_count();
         let mut pts = vec![];
+        // Per point: unit tangent of the base path, and the ridge spacing before and after it.
+        let mut tans: Vec<(Vec2, f64, f64)> = vec![];
         let mut k = 0usize;
+        // Ridges are spaced by length, not by `t`: a line's retracted handles bunch `t` up near
+        // the anchors, and so does any uneven curve.
+        let lens: Vec<f64> = (0..segs).map(|i| sp.segment(i).arclen(ZIGZAG_ARCLEN_ACCURACY)).collect();
+        let spacing = |i: usize| lens.get(i).map_or(0.0, |l| l / (ridges + 1) as f64);
         for i in 0..segs {
             let c = sp.segment(i);
-            // Ridges are spaced by length, not by `t`: a line's retracted handles bunch `t` up
-            // near the anchors, and so does any uneven curve.
-            let len = c.arclen(ZIGZAG_ARCLEN_ACCURACY);
+            let len = lens.get(i).copied().unwrap_or(0.0);
             for j in 0..=ridges {
                 let s = j as f64 / (ridges + 1) as f64;
                 let t = if j > 0 && len > 1e-9 { c.inv_arclen(s * len, ZIGZAG_ARCLEN_ACCURACY).clamp(0.0, 1.0) } else { s };
@@ -309,6 +315,16 @@ pub fn zig_zag(path: &PathData, b: Rect, p: &Value) -> PathData {
                 };
                 let sign = if k.is_multiple_of(2) { 1.0 } else { -1.0 };
                 pts.push(c.eval(t) + nrm * (amp * sign));
+                let before = if j > 0 {
+                    spacing(i)
+                } else if i > 0 {
+                    spacing(i - 1)
+                } else if sp.closed {
+                    spacing(segs - 1)
+                } else {
+                    0.0
+                };
+                tans.push((Vec2::new(-nrm.y, nrm.x), before, spacing(i)));
                 k += 1;
             }
         }
@@ -316,12 +332,23 @@ pub fn zig_zag(path: &PathData, b: Rect, p: &Value) -> PathData {
             if segs > 0 {
                 let c = sp.segment(segs - 1);
                 let sign = if k.is_multiple_of(2) { 1.0 } else { -1.0 };
-                pts.push(c.p3 + normal_at(&c, 1.0) * (amp * sign));
+                let nrm = normal_at(&c, 1.0);
+                pts.push(c.p3 + nrm * (amp * sign));
+                tans.push((Vec2::new(-nrm.y, nrm.x), spacing(segs - 1), 0.0));
             } else {
                 pts.extend(sp.anchors.iter().map(|a| a.p));
             }
         }
-        subs.push(if smooth { catmull_rom(&pts, sp.closed, 1.0) } else { SubPath::polyline(&pts, sp.closed) });
+        subs.push(if smooth && tans.len() == pts.len() {
+            let anchors = pts
+                .iter()
+                .zip(&tans)
+                .map(|(&q, &(tan, before, after))| Anchor::with_handles(q, q - tan * (before / 3.0), q + tan * (after / 3.0)))
+                .collect();
+            SubPath::new(anchors, sp.closed)
+        } else {
+            SubPath::polyline(&pts, sp.closed)
+        });
     }
     PathData::new(subs)
 }
