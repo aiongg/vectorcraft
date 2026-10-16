@@ -52,7 +52,8 @@ fn paint_sample(n: &Node, on_stroke: bool, p: Point) -> Option<Color> {
 
 /// The colour of image `n`'s pixels at `p`, averaged over the raster sample size. In a CMYK
 /// document it is CMYK: an RGB image's pixels convert through the colour settings, as the
-/// document's colours do; a CMYK image gives back its inks.
+/// document's colours do; a CMYK image gives back the inks the decoder turned into RGB (exactly
+/// when one of C, M and Y, or K, is zero).
 fn image_color_at(cx: &ToolContext, n: &Node, p: Point) -> Option<Color> {
     let NodeKind::Image(im) = &n.kind else { return None };
     if im.xf.determinant().abs() < 1e-12 {
