@@ -511,6 +511,57 @@ fn mesh_create_flat() {
     assert_eq!(node(&s, a).kind_label(), "Mesh");
 }
 
+/// A selected 4×2 image placed at 10× (40×20 pt), left half red, right half blue; linked to a
+/// file when `linked`.
+fn red_blue_image(s: &mut Session, linked: bool) -> NodeId {
+    let img = image::RgbaImage::from_fn(4, 2, |x, _| if x < 2 { image::Rgba([255, 0, 0, 255]) } else { image::Rgba([0, 0, 255, 255]) });
+    let mut png = vec![];
+    img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+    s.edit("Place", |d, sel| {
+        d.images.insert("pic".into(), vectorcraft_doc::ImageBlob::png(png));
+        let id = d.alloc_id();
+        let im = vectorcraft_doc::ImageObject {
+            key: "pic".into(),
+            width: 4,
+            height: 2,
+            xf: vectorcraft_geom::Affine::scale(10.0),
+            link: linked.then(|| vectorcraft_doc::LinkInfo::new("/art/pic.png".to_string())),
+            placement: Default::default(),
+        };
+        d.insert(d.default_layer(), 0, Node::new(id, NodeKind::Image(Box::new(im))))?;
+        sel.set([id]);
+        Ok(id)
+    })
+    .unwrap()
+}
+
+#[test]
+fn mesh_from_an_embedded_image_takes_its_colours() {
+    let mut s = session();
+    let a = red_blue_image(&mut s, false);
+    s.execute("object.mesh.create", &json!({"rows": 2, "cols": 2})).unwrap();
+    let m = mesh_of(&s, a);
+    assert_eq!((m.rows, m.cols, m.points.len()), (2, 2, 9));
+    for q in &m.points {
+        let want = if q.p.x < 15.0 {
+            "#ff0000"
+        } else if q.p.x > 25.0 {
+            "#0000ff"
+        } else {
+            continue;
+        };
+        assert_eq!(q.color.to_hex(), want, "point at {:?}", q.p);
+        assert!(close(q.opacity as f64, 1.0));
+    }
+    assert_eq!(node(&s, a).geometric_bounds().map(|b| (b.x0.round(), b.y0.round(), b.x1.round(), b.y1.round())), Some((0.0, 0.0, 40.0, 20.0)));
+
+    let mut s = session();
+    let b = red_blue_image(&mut s, true);
+    let e = s.execute("object.mesh.create", &json!({"rows": 2, "cols": 2})).unwrap_err();
+    assert!(e.to_string().contains("linked image"), "{e}");
+    assert_eq!(node(&s, b).kind_label(), "Image");
+}
+
 #[test]
 fn mesh_to_center_highlight() {
     let mut s = session();

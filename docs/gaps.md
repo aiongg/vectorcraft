@@ -220,9 +220,9 @@ from G14 and the budget run of G15: **~170–270 h** one agent, ~50–80 h wall 
   where three or more overlap. The group renders, saves and exports through its live expansion. Still missing: the
   right-click Bring Forward / Send Backward menu where three or more objects overlap; adding objects to the group by
   dragging them in the Layers panel is untested.
-- **Missing (asked for by users, from earlier versions):** Object › Create Gradient
-  Mesh on an embedded image, which turns it into a mesh of its colours (#1676); radial gradients in Image Trace's
-  Gradients option, which traces linear ones only (draft #1849). Inside the estimate below.
+- **Missing (asked for by users, from earlier versions):** radial gradients in Image Trace's
+  Gradients option, which traces linear ones only (draft #1849); the Mesh tool's click on an embedded image
+  (Object › Create Gradient Mesh meshes one in its colours: #1676). Inside the estimate below.
 - **Missing:** gradient dither and perceptual blending, gradient presets (30.0); tangent and perpendicular
   snapping and the consolidated snapping options (30.0); artboard locking, artboard colours and managing
   artboards from the canvas (30.0); the Blend panel with ease in/out and separate colour acceleration (30.7);
