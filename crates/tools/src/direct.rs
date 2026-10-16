@@ -42,6 +42,7 @@ use crate::meshedit::MeshEdit;
 use crate::pathtype::{self, BracketDrag, over_bracket};
 use crate::rulerguide::GuideEdit;
 use crate::select::{MoveSnap, is_area_type, matrix_json};
+use crate::text::SelectedLayouts;
 use crate::{Action, Cursor, Mods, Overlay, PointerEvent, PointerKind, Tool, ToolContext, ToolKey};
 
 #[derive(Clone, Debug)]
@@ -147,6 +148,8 @@ pub struct DirectSelectionTool {
     click: Option<(NodeId, usize, usize)>,
     /// A click on a whole path picks the segment on release; a drag still moves the whole path.
     click_segment: Option<(NodeId, usize, usize)>,
+    /// Layouts of the selected type, for its overflow markers.
+    layouts: SelectedLayouts,
 }
 
 impl DirectSelectionTool {
@@ -165,6 +168,7 @@ impl DirectSelectionTool {
             guide: GuideEdit::default(),
             click: None,
             click_segment: None,
+            layouts: SelectedLayouts::default(),
         }
     }
 
@@ -792,6 +796,7 @@ impl Tool for DirectSelectionTool {
                     out.extend(frame_overlays(cx));
                     out.extend(pathtype::overlays(cx));
                 }
+                self.layouts.overflow_markers(cx, None, &mut out);
                 if matches!(self.state, State::Handle { .. } | State::MoveAnchors { .. } | State::MoveObject { .. }) {
                     out.extend(self.guides.iter().cloned());
                 }

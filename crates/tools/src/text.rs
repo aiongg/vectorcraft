@@ -19,13 +19,14 @@
 //! IME: the marked text of a composition is part of the typing session (so it lays out in place),
 //! underlined, until the IME commits it (it then goes through [`Tool::text_input`]) or clears it.
 
+use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
 use vectorcraft_doc::hit::hit_test;
 use vectorcraft_doc::{NodeId, NodeKind, TextKind, TextObject, TextRun};
-use vectorcraft_geom::{BezPath, Point, Rect, Shape};
+use vectorcraft_geom::{Affine, BezPath, Point, Rect, Shape};
 use vectorcraft_text::{FontDb, TextLayout, edit};
 
 use crate::guides::DrawSnap;
@@ -92,6 +93,37 @@ pub struct TypeTool {
     /// Styled copy of the last copied range (pasting the same plain text keeps its styles).
     clipboard: Vec<TextRun>,
     cache: Mutex<Option<CachedLayout>>,
+    selected: SelectedLayouts,
+}
+
+/// Layouts of the selected type objects, for the overflow markers the Type and selection tools
+/// draw every frame: by node id, each cached by content and fonts like [`TypeTool::layout`], and
+/// kept only while the object stays selected.
+#[derive(Default)]
+pub(crate) struct SelectedLayouts(Mutex<HashMap<NodeId, CachedLayout>>);
+
+impl SelectedLayouts {
+    /// The red out-port plus of each selected area or path type object whose text doesn't fit,
+    /// except `skip` (the text being edited, which draws its own).
+    pub(crate) fn overflow_markers(&self, cx: &ToolContext, skip: Option<NodeId>, o: &mut Vec<Overlay>) {
+        let fonts = FontDb::global().generation();
+        let mut c = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        let mut old = std::mem::take(&mut *c);
+        for id in &cx.selection.objects {
+            let Some(t) = TypeTool::text(cx, *id).filter(|t| !matches!(t.kind, TextKind::Point)) else { continue };
+            // Layout ignores `xf`, so a move reuses the cached layout.
+            let mut key = t.clone();
+            key.xf = Affine::IDENTITY;
+            let entry = match old.remove(id) {
+                Some(e) if e.0.0 == fonts && e.0.1 == key => e,
+                _ => ((fonts, key), Arc::new(vectorcraft_text::layout(FontDb::global(), t))),
+            };
+            if Some(*id) != skip {
+                overflow_marker(t, &entry.1, cx, o);
+            }
+            c.insert(*id, entry);
+        }
+    }
 }
 
 impl TypeTool {
@@ -303,26 +335,27 @@ impl TypeTool {
         out.push(Action::Notify("text.editNew".into()));
         out
     }
+}
 
-    fn overflow_marker(t: &TextObject, lay: &TextLayout, cx: &ToolContext, o: &mut Vec<Overlay>) {
-        if !lay.overflow {
-            return;
-        }
-        // The out port: bottom-right of the frame (end of the path for type on a path).
-        let port = match &t.kind {
-            TextKind::Area { frame } => frame.bounds().map(|b| t.xf * Point::new(b.x1, b.y1)),
-            TextKind::OnPath { path, .. } => path.to_bezpath().segments().last().map(|s| t.xf * vectorcraft_geom::ParamCurve::end(&s)),
-            TextKind::Point => None,
-        };
-        let Some(c) = port else { return };
-        let h = cx.tol(4.5);
-        let r = Rect::new(c.x - h, c.y - h, c.x + h, c.y + h);
-        let red = [230, 30, 30];
-        o.push(Overlay::Path { path: r.to_path(0.1), color: red, width: 1.0, dashed: false });
-        let (k, m) = (cx.tol(2.5), r.center());
-        o.push(Overlay::Line { a: Point::new(m.x - k, m.y), b: Point::new(m.x + k, m.y), color: red, dashed: false });
-        o.push(Overlay::Line { a: Point::new(m.x, m.y - k), b: Point::new(m.x, m.y + k), color: red, dashed: false });
+/// The red out-port plus of `t` (laid out as `lay`) when its text doesn't fit.
+pub(crate) fn overflow_marker(t: &TextObject, lay: &TextLayout, cx: &ToolContext, o: &mut Vec<Overlay>) {
+    if !lay.overflow {
+        return;
     }
+    // The out port: bottom-right of the frame (end of the path for type on a path).
+    let port = match &t.kind {
+        TextKind::Area { frame } => frame.bounds().map(|b| t.xf * Point::new(b.x1, b.y1)),
+        TextKind::OnPath { path, .. } => path.to_bezpath().segments().last().map(|s| t.xf * vectorcraft_geom::ParamCurve::end(&s)),
+        TextKind::Point => None,
+    };
+    let Some(c) = port else { return };
+    let h = cx.tol(4.5);
+    let r = Rect::new(c.x - h, c.y - h, c.x + h, c.y + h);
+    let red = [230, 30, 30];
+    o.push(Overlay::Path { path: r.to_path(0.1), color: red, width: 1.0, dashed: false });
+    let (k, m) = (cx.tol(2.5), r.center());
+    o.push(Overlay::Line { a: Point::new(m.x - k, m.y), b: Point::new(m.x + k, m.y), color: red, dashed: false });
+    o.push(Overlay::Line { a: Point::new(m.x, m.y - k), b: Point::new(m.x, m.y + k), color: red, dashed: false });
 }
 
 /// Byte range in `s` of the characters `r` (IME ranges count characters; carets count bytes).
@@ -758,16 +791,7 @@ impl Tool for TypeTool {
         if let (Some((_, s)), Some(d)) = (self.press, self.drag) {
             o.push(Overlay::Marquee(Rect::from_points(s, d)));
         }
-        // Overflow markers on selected text.
-        for id in &cx.selection.objects {
-            if Some(*id) == self.editing {
-                continue;
-            }
-            if let Some(t) = Self::text(cx, *id) {
-                let lay = self.layout(t);
-                Self::overflow_marker(t, &lay, cx, &mut o);
-            }
-        }
+        self.selected.overflow_markers(cx, self.editing, &mut o);
         let Some(t) = self.current(cx) else { return o };
         let lay = self.layout(&t);
         let len = t.plain_text().len();
@@ -807,7 +831,7 @@ impl Tool for TypeTool {
                 o.push(Overlay::Highlight { quad: q.map(|p| t.xf * p), color: [60, 120, 255, 90] });
             }
         }
-        Self::overflow_marker(&t, &lay, cx, &mut o);
+        overflow_marker(&t, &lay, cx, &mut o);
         o
     }
     fn cursor(&self, cx: &ToolContext, p: Point, _m: Mods) -> Cursor {
