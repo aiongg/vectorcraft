@@ -545,6 +545,7 @@
 	Convert to RGB	轉換為 RGB
 	Convert to Shape	轉換為形狀
 	Convert to sRGB	轉換為 sRGB
+	Convert to Straight Lines	轉換為直線
 	Convert:	轉換：
 	Copied the CSS of {rules} object(s)	已複製 {rules} 個物件的 CSS
 	Copies:	份數：
@@ -563,6 +564,7 @@
 	Copyright Notice:	著作權聲明：
 	Copyright Status:	著作權狀態：
 	Copyright Symbol	著作權符號
+	Corner Point Angle Threshold:	尖角點角度臨界值：
 	Corner Radius	圓角半徑
 	Corner Radius:	圓角半徑：
 	Corner:	轉角：
@@ -1280,6 +1282,14 @@
 	Hyphenate	使用連字號
 	Hyphenation	連字號
 	Hyphenation…	連字號…
+	Words Longer Than:	單字長度超過：
+	After First:	斷開前至少：
+	Before Last:	斷開後至少：
+	Hyphen Limit:	連字號限制：
+	Hyphenation Zone:	連字區：
+	letters	個字母
+	hyphens	個連字號
+	Hyphenate Capitalized Words	大寫單字使用連字號
 	ICC Profile	ICC 描述檔
 	Identify Objects By	識別物件依據
 	Ignore	略過
@@ -1959,6 +1969,7 @@
 	Out Tangent Handles	外切線控制把手
 	Outer Glow…	外光暈…
 	Outline	外框
+	Outline Object	外框物件
 	Outline Others	其他以外框檢視
 	Outline Stroke	外框筆畫
 	Outline Text	外框文字
@@ -2500,6 +2511,7 @@
 	Save Save for Web Preset	儲存「儲存為網頁用」預設集
 	Save selected colors as swatches	將所選顏色儲存為色票
 	Save Selection…	儲存選取範圍…
+	Update Selection	更新選取範圍
 	Save Swatch Library	儲存色票資料庫
 	Save Swatch Library…	儲存色票資料庫…
 	Save the current layout under this name	以此名稱儲存目前的版面配置
@@ -2737,6 +2749,7 @@
 	Show Modified	顯示已修改
 	Show Note	顯示註解
 	Show Options	顯示選項
+	Show Original Path	顯示原始路徑
 	Color Panel Options	顏色面板選項
 	Show Package	顯示封裝
 	Show Panel	顯示面板

@@ -258,7 +258,7 @@ The older names below remain listed because existing workflows use them.
 
 | Tool | Arguments and result |
 |---|---|
-| `command_list` | Optional `filter`, `enabled_only`; returns the command array |
+| `command_list` | Optional `filter` (or `query`), `menu` (a menu path substring, levels joined with ` > `), `enabled_only`, `brief` (no `params` text); returns the command array |
 | `command_run` | `id`, optional `params`; runs the command through the existing backend. An unknown key in `params` is an error that names it and the nearest key the command takes (`invalid parameters for `file.new`: unknown parameter `widht`; did you mean `width`?`), so a misspelt key no longer runs the command with its default (see [Parameter keys](#parameter-keys)) |
 | `command_batch` | `steps: [{id, params?}]` (at most 256), optional `stop_on_error` (default true), `atomic` and `label`; returns `completed`, `failed`, `results: [{ok, result\|error}]` and `created` (the ids the `draw_path` / `draw_shape` steps made, in order). A step's `id` is a command id, or `draw_path` / `draw_shape` with that tool's arguments as `params` (checked as `tools/call` checks them; the step's result is the tool's, so `"$N.id"` is the new object). Each edit has its own undo step, or with `atomic: true` the batch's edits are one undo step named `label` (else after its first edit; `edit.undoGroup.begin`/`end` underneath); failures set `isError`. A param string `"$N.path"` or `"$last.path"` takes a value from an earlier step's result (see `run` below). Kept step results total at most 8 MiB; past that the batch stops with the reason. This is the MCP tool, not the engine command `command.batch` (that one takes `commands: [{command, params}]` and is what the Actions panel plays); use `command_run` with `command.batch` when replaying a recorded action |
 | `doc_inspect` | Optional `depth`, `childLimit`; same summary as `inspect_document` |
@@ -300,7 +300,7 @@ objects' fills or strokes differ (`fillMixed` / `strokeMixed`, drawn as a "?" pr
 
 | Tool | Arguments | Notes |
 |---|---|---|
-| `list_commands` | `{filter?, enabledOnly?}` | The command catalogue: id, label, menu, shortcut, params doc, enablement. |
+| `list_commands` | `{filter?, query?, menu?, enabledOnly?, brief?}` | The command catalogue: id, label, menu, shortcut, params doc (left out with `brief`), enablement. |
 | `run_command` | `{command, params?}` | Runs any command. Use it for everything without a dedicated tool. |
 | `inspect_document` | `{depth?, childLimit?}` | Artboards, layer tree (ids, kinds, bounds, paint), selection, history, tool. A type node's `fill`, `stroke` and `strokeWidth` are the paint its characters show (its first run's); fills and strokes of the type object itself come as `objectFill`, `objectStroke` and `objectStrokeWidth`. Paint comes as a label (`"#ff0000"`, `"None"`, `"G1 40% (#ff9999)"` for a swatch at a tint); `paint.proxies` gives it as an object. |
 | `inspect_ui` | `{}` | UI state. Remote mode only. |
@@ -360,6 +360,10 @@ its kind (`paint.proxies`) and the Gradient tool's annotator then show that row.
 stroke instead of the whole object: `run_command effect.apply {"effect": "path.offsetPath", "item": 0}`, and
 `effect.remove`, `effect.setParams` (`visible` toggles one) and `effect.duplicate` address that item's effects;
 `apply_effect` uses the active item. `effect.list` reports each object's item effects under `applied[].items`.
+
+`effect.apply {"effect": "path.outlineObject"}` (Effect › Path › Outline Object) takes no parameters. Type that carries
+it is drawn, exported and expanded as its glyph outlines and stays editable type, and the effects after it reshape
+those outlines. On paths, compound paths and images it does not change what is drawn.
 
 Errors (unknown tool, bad arguments, a disabled or failing command) come back as a normal result with
 `isError: true` and a message. The model can read the message and retry.
@@ -486,7 +490,9 @@ Draw, look, export:
 
 Export As goes through `options` too: for PNG, JPEG and WebP `useArtboards: true` writes one file per artboard (all,
 or `range`), named `<file>-<artboard>.<ext>`, and returns `{path, files}` (a PDF keeps them as pages of one file; an
-SVG writes one file per artboard of a `range`); `useArtboards: false` exports the bounds of the visible art.
+SVG writes one file per artboard of a `range`); `useArtboards: false` exports the bounds of the visible art with what
+its effects paint, the effects of groups, type and images included. `artboard.fitToArt` measures the art the same
+way.
 
 Raster exports take more options in `options`: `ppi` (72, 150, 300…; stored in the file), `background`
 (`transparent`, `white`, `black` or `"#rrggbb"`), `antiAlias` (`none`, `art`, `type`: text snapped to pixels) and,
@@ -546,7 +552,8 @@ strokes, effects or a brush comes in as its drawn look (a group named after it).
 document, whole and editable: point type, area type (a story in several frames as threaded type) and type on a path,
 with its fonts, size, leading, tracking, scaling, baseline shift, fill and stroke (grey, RGB or CMYK), alignment,
 indents and paragraph spacing. Where the text document can't say, type that shows is the page's, in its text object's
-place. A file whose editing data has symbols,
+place. A text object on a layer that shows and doesn't print keeps the type the text document makes for it, on that
+layer, even where the page doesn't draw it. A file whose editing data has symbols,
 pattern fills, placed files or anything else the reader doesn't read on a layer that shows, or whose layers look
 different from its page, opens as before: an EPS as its printed page, a `.ai` file from its PDF content (where plain
 groups open ungrouped), with a warning saying why. Layers look different when they draw an object the page doesn't (or
@@ -940,7 +947,11 @@ Select → Save Selection… keeps the selected objects under a name, in the doc
 the first free "Selection N"; an existing name is replaced with the current selection; at most 25 per document,
 names up to 255 characters) → `{name}`, one undo step. `select.savedList` lists the names in menu order, and
 `select.recall {name}` selects those objects again, except the ones deleted since and the ones hidden, locked or
-outside the isolated group or layer (see Object selection) → `{count}`. Edit Selection…
+outside the isolated group or layer (see Object selection) → `{count}`. Update Selection: `select.update {}`
+replaces the objects of the saved selection last recalled in the document with the selected objects → `{name}`,
+one undo step. The command is enabled while objects are selected and the document holds that saved selection,
+under its own name or a name `select.editSaved` gave it; Undo and Redo do not change which saved selection is
+recalled. Edit Selection…
 renames and deletes: `select.editSaved {name, newName?, delete?}`, or several at once as
 `{edits: [{name, newName?, delete?}…]}` in one undo step, where every `name` is the name before the edit and the
 names must stay unique. In the desktop app the saved selections are listed at the bottom of the Select menu
@@ -1001,7 +1012,9 @@ already walks Image Trace. Short agent entry points:
 - Image Trace: `imageTrace.presets`, `imageTrace.make {id?, preset?, params?, view?}` (or `imageTrace.makeAndExpand`),
   `imageTrace.setView`, `imageTrace.expand`, `imageTrace.release`.
 
-`dataset.select`, `dataset.next` and `dataset.prev` reply `{name, applied, skipped}`. They skip an object that is
+`dataset.select`, `dataset.next` and `dataset.prev` reply `{name, applied, skipped}`. They add `overflow: [id…]`
+when area type or type on a path whose text they rewrote doesn't fit, as `text.setText` does (see
+[Fitting area type](#fitting-area-type-auto-size-shrink-text-to-fit-overflow)). They skip an object that is
 locked or inside a hidden or locked layer or group. They apply the data set's visibility values that show objects
 first, outermost object first, then its other values in the order the variables are defined, then its visibility
 values that hide objects, innermost object first. A data set that shows a group sets the objects inside it in the
@@ -1174,6 +1187,10 @@ objects themselves (a group's own stack; layers through `ids`) or, with `target:
 groups and layers. `appearance.targetContents` selects a group's members (double-clicking the Contents row).
 SVG and PDF export bake a group's own fills, strokes and geometry effects into paths; its raster effects stay a
 filter on the whole group in SVG and become an image of the whole group in PDF.
+A geometry effect on one of type's own fills or strokes (`effect.apply` with `item`) reshapes the whole outline that
+the fill or stroke paints, and SVG, PDF, EPS and the other vector exports write such type as paths. On type that
+holds inline graphics, those effects are drawn and exported only when the type has a geometry effect or perspective
+of its own.
 
 ```json
 {"name":"run_command","arguments":{"command":"appearance.addFill","params":{"ids":[7]}}}
@@ -1445,8 +1462,10 @@ fill alone and each stroke its outline filled with its paint (a brushed stroke: 
 under the object's id; each piece takes its fill's or stroke's opacity and blend mode, and the group keeps the
 object's transparency and opacity mask. Geometry effects are baked; raster effects become an embedded image at the
 document's raster effects resolution (shadows and outer glows under the art; a blur, feather or inner glow replaces
-the object with the image). Type with effects or fills and strokes of its own is outlined. A group's or layer's own
-fills and strokes become objects among its members, and its members are expanded too.
+the object with the image). Type with a geometry effect (Outline Object included) or with fills and strokes of its own
+is outlined; type that has no fills or strokes of its own and whose only effects are shadows or outer glows stays
+type, with the image under it. A group's or layer's own fills and strokes become objects among its members, and its
+members are expanded too.
 
 ```json
 {"name":"run_command","arguments":{"command":"effect.expandAppearance","params":{"ids":[12]}}}
@@ -1549,8 +1568,8 @@ its symbol is missing, when its symbol or a symbol nested in its art holds an in
 nest 32 deep in its art. PDF and EPS export and the SVG of an artboard leave out art outside the page or artboard, and
 Skip Blank Artboards skips an artboard with no art on it. For both, the box of an instance whose art holds brushed
 strokes grows by 16 times the widest stroke (at least 1 pt) of the objects in its art that have a brushed stroke,
-plus 8 pt. The SVG of an artboard also keeps an object that holds an instance when the effects in the symbol's art, or
-the instance's own, paint onto the artboard.
+plus 8 pt. The SVG of an artboard also keeps an object whose effects paint onto the artboard, and an object that holds
+an instance when the effects in the symbol's art, or the instance's own, paint onto it.
 
 ## Expand
 
@@ -3077,6 +3096,32 @@ Type and Convert To Point Type. Either keeps the text and its styles and is one 
 
 ```json
 {"name":"run_command","arguments":{"command":"type.convertToAreaType","params":{"ids":[42]}}}
+```
+
+## Hyphenation options
+
+`text.setFormat` sets the Paragraph panel menu's Hyphenation… options of the selected type (or `ids`, or the
+paragraphs a `start` / `end` range touches), which apply while `hyphenate` is on:
+
+- `wordsLongerThan` (letters, 1 to 25, default 5): only words with more letters than this are hyphenated.
+- `afterFirst` and `beforeLast` (letters, 1 to 15, default 3): the fewest letters a word keeps before and after the
+  hyphen.
+- `hyphenLimit` (lines, 0 to 25, default 0): the most consecutive lines that may end with a hyphen; 0 sets no limit. A
+  line that ends at a soft hyphen counts, and a soft hyphen still breaks a line past the limit.
+- `hyphenationZone` (pt, 0 to 1296, default 0): with the Single-line Composer, a line whose text before the next word
+  already ends within this distance of the right edge breaks before that word instead of hyphenating it. The Every-line
+  Composer does not use it.
+- `hyphenateCapitalized` (default `true`): `false` leaves words that start with a capital letter whole. Words in
+  capitals only are never hyphenated.
+
+The letter and line counts are rounded, and every value is clamped to its range. Preferences › Hyphenation › Exceptions still decide the breaks of a
+listed word. The options are saved with the paragraph (`hyphenation` in `para`) only when they differ from the
+defaults, and paragraph styles carry them (`paraStyle.new {attrs: {hyphenation: {words_longer_than: 8}}}`). One undo
+step. `ui.hyphenation` opens the Hyphenation dialog on the values the Paragraph panel shows; OK sends the values that
+changed.
+
+```json
+{"name":"run_command","arguments":{"command":"text.setFormat","params":{"hyphenate":true,"wordsLongerThan":8,"hyphenLimit":2}}}
 ```
 
 ## Kinsoku Set

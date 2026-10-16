@@ -561,6 +561,7 @@
 	Convert to RGB	Конвертиране в RGB
 	Convert to Shape	Конвертиране в фигура
 	Convert to sRGB	Конвертиране в sRGB
+	Convert to Straight Lines	Преобразуване в прави линии
 	Convert:	Конвертиране:
 	Copied the CSS of {rules} object(s)	Копиран е CSS кодът на {rules} обект(а)
 	Copies:	Копия:
@@ -579,6 +580,7 @@
 	Copyright Notice:	Бележка за авторското право:
 	Copyright Status:	Статус на авторското право:
 	Copyright Symbol	Символ за авторско право
+	Corner Point Angle Threshold:	Праг на ъгъла при ъгловите точки:
 	Corner Radius	Радиус на ъгъла
 	Corner Radius:	Радиус на ъгъла:
 	Corner:	Ъгъл:
@@ -1285,6 +1287,14 @@
 	Hyphenate	Пренасяне на думи
 	Hyphenation	Пренасяне
 	Hyphenation…	Пренасяне…
+	Words Longer Than:	Думи, по-дълги от:
+	After First:	След първите:
+	Before Last:	Преди последните:
+	Hyphen Limit:	Лимит на тиретата:
+	Hyphenation Zone:	Зона за пренасяне:
+	letters	букви
+	hyphens	тирета
+	Hyphenate Capitalized Words	Пренасяне на думи с главна буква
 	ICC Profile	ICC профил
 	Identify Objects By	Идентифициране на обектите по
 	Ignore	Игнориране
@@ -1944,6 +1954,7 @@
 	Out Tangent Handles	Външни тангентни дръжки
 	Outer Glow…	Външно разсейване…
 	Outline	Контур
+	Outline Object	Преобразуване на обекта в контур
 	Outline Others	Контуриране на другите
 	Outline Stroke	Преобразуване на щриха в контур
 	Outline Text	Преобразуване на текста в контури
@@ -2479,6 +2490,7 @@
 	Save Save for Web Preset	Запази предварителна настройка за „Запази за уеб“
 	Save selected colors as swatches	Запази избраните цветове като образци
 	Save Selection…	Запази селекцията…
+	Update Selection	Актуализиране на селекцията
 	Save Swatch Library	Запази библиотека с образци
 	Save Swatch Library…	Запази библиотека с образци…
 	Save the current layout under this name	Запази текущото разположение под това име
@@ -2706,6 +2718,7 @@
 	Show Modified	Показване на променените
 	Show Note	Показване на бележка
 	Show Options	Показване на опциите
+	Show Original Path	Показване на оригиналния път
 	Show Package	Показване на пакет
 	Show Panel	Показване на панел
 	Show Pattern Swatches	Показване на образци за мостра
@@ -3739,6 +3752,7 @@ axis	Both	И двете
 @msg	no saved presets	няма запазени предварителни настройки
 @msg	no saved print preset named `{name}` ({DEFAULT_PRESET} is protected: start a new one from it)	няма запазена предварителна настройка за печат с име „{name}“ ({DEFAULT_PRESET} е защитена: създайте нова от нея)
 @msg	no saved profiles	няма запазени профили
+@msg	no saved selection recalled	няма възстановена запазена селекция
 @msg	no saved selections	няма запазени селекции
 @msg	no saved themes	няма запазени теми
 @msg	no segment {segment} on line {line}	няма сегмент {segment} на ред {line}

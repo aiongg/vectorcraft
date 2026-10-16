@@ -574,6 +574,7 @@
 	Convert to RGB	Преобразовать в RGB
 	Convert to Shape	Преобразовать в фигуру
 	Convert to sRGB	Преобразовать в sRGB
+	Convert to Straight Lines	Преобразовать в прямые линии
 	Convert:	Преобразовать:
 	Copied the CSS of {rules} object(s)	Скопирован CSS для {rules} объекта(ов)
 	Copies:	Копии:
@@ -592,6 +593,7 @@
 	Copyright Notice:	Уведомление об авторских правах:
 	Copyright Status:	Статус авторских прав:
 	Copyright Symbol	Символ авторского права
+	Corner Point Angle Threshold:	Пороговый угол угловых точек:
 	Corner Radius	Радиус угла
 	Corner Radius:	Радиус угла:
 	Corner:	Угол:
@@ -1306,6 +1308,14 @@
 	Hyphenate	Расставлять переносы
 	Hyphenation	Расстановка переносов
 	Hyphenation…	Расстановка переносов…
+	Words Longer Than:	Слова длиннее:
+	After First:	После первых:
+	Before Last:	Перед последними:
+	Hyphen Limit:	Предел переносов:
+	Hyphenation Zone:	Зона переноса:
+	letters	букв
+	hyphens	переносов
+	Hyphenate Capitalized Words	Переносить слова с прописной буквы
 	ICC Profile	Профиль ICC
 	Identify Objects By	Определять объекты по
 	Ignore	Игнорировать
@@ -1983,6 +1993,7 @@
 	Out Tangent Handles	Маркеры исходящей касательной
 	Outer Glow…	Внешнее свечение…
 	Outline	Контур
+	Outline Object	Обвести объект
 	Outline Others	Обвести остальные
 	Outline Stroke	Обвести обводку
 	Outline Text	Обвести текст
@@ -2522,6 +2533,7 @@
 	Save Save for Web Preset	Сохранить набор «Сохранить для web»
 	Save selected colors as swatches	Сохранить выбранные цвета как образцы
 	Save Selection…	Сохранить выделение…
+	Update Selection	Обновить выделение
 	Save Swatch Library	Сохранить библиотеку образцов
 	Save Swatch Library…	Сохранить библиотеку образцов…
 	Save the current layout under this name	Сохранить текущий макет под этим именем
@@ -2760,6 +2772,7 @@
 	Show Modified	Показать изменённые
 	Show Note	Показать примечание
 	Show Options	Показать параметры
+	Show Original Path	Показать исходный контур
 	Color Panel Options	Параметры панели «Цвет»
 	Show Package	Показать пакет
 	Show Panel	Показать панель
@@ -3811,6 +3824,7 @@ axis	Both	Оба
 @msg	no saved presets	нет сохранённых наборов
 @msg	no saved print preset named `{name}` ({DEFAULT_PRESET} is protected: start a new one from it)	нет сохранённого набора печати с именем `{name}` ({DEFAULT_PRESET} защищён: создайте новый на его основе)
 @msg	no saved profiles	нет сохранённых профилей
+@msg	no saved selection recalled	сохранённое выделение не восстановлено
 @msg	no saved selections	нет сохранённых выделений
 @msg	no saved themes	нет сохранённых тем
 @msg	no segment {segment} on line {line}	нет сегмента {segment} на строке {line}

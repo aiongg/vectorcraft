@@ -563,6 +563,7 @@
 	Convert to RGB	Konvertera till RGB
 	Convert to Shape	Konvertera till form
 	Convert to sRGB	Konvertera till sRGB
+	Convert to Straight Lines	Konvertera till raka linjer
 	Convert:	Konvertera:
 	Copied the CSS of {rules} object(s)	Kopierade CSS för {rules} objekt
 	Copies:	Kopior:
@@ -581,6 +582,7 @@
 	Copyright Notice:	Upphovsrättsmeddelande:
 	Copyright Status:	Upphovsrättsstatus:
 	Copyright Symbol	Upphovsrättssymbol
+	Corner Point Angle Threshold:	Vinkeltröskel för hörnpunkter:
 	Corner Radius	Hörnradie
 	Corner Radius:	Hörnradie:
 	Corner:	Hörn:
@@ -1287,6 +1289,14 @@
 	Hyphenate	Avstava
 	Hyphenation	Avstavning
 	Hyphenation…	Avstavning…
+	Words Longer Than:	Ord längre än:
+	After First:	Efter första:
+	Before Last:	Före sista:
+	Hyphen Limit:	Avstavningsgräns:
+	Hyphenation Zone:	Avstavningszon:
+	letters	bokstäver
+	hyphens	bindestreck
+	Hyphenate Capitalized Words	Avstava ord med inledande versal
 	ICC Profile	ICC-profil
 	Identify Objects By	Identifiera objekt efter
 	Ignore	Ignorera
@@ -1944,6 +1954,7 @@
 	Out Tangent Handles	Utgående tangenthandtag
 	Outer Glow…	Yttre glöd…
 	Outline	Disposition
+	Outline Object	Konvertera objekt till konturer
 	Outline Others	Visa övriga som disposition
 	Outline Stroke	Konvertera kontur till form
 	Outline Text	Konvertera text till konturer
@@ -2479,6 +2490,7 @@
 	Save Save for Web Preset	Spara förinställning för Spara för webben
 	Save selected colors as swatches	Spara markerade färger som färgrutor
 	Save Selection…	Spara markering…
+	Update Selection	Uppdatera markering
 	Save Swatch Library	Spara färgrutebibliotek
 	Save Swatch Library…	Spara färgrutebibliotek…
 	Save the current layout under this name	Spara den aktuella layouten under det här namnet
@@ -2706,6 +2718,7 @@
 	Show Modified	Visa ändrade
 	Show Note	Visa anteckning
 	Show Options	Visa alternativ
+	Show Original Path	Visa ursprunglig bana
 	Show Package	Visa paket
 	Show Panel	Visa panel
 	Show Pattern Swatches	Visa mönsterprover
@@ -3739,6 +3752,7 @@ axis	Both	Båda
 @msg	no saved presets	inga sparade förinställningar
 @msg	no saved print preset named `{name}` ({DEFAULT_PRESET} is protected: start a new one from it)	ingen sparad utskriftsförinställning med namnet `{name}` ({DEFAULT_PRESET} är skyddad: skapa en ny utifrån den)
 @msg	no saved profiles	inga sparade profiler
+@msg	no saved selection recalled	ingen sparad markering hämtad
 @msg	no saved selections	inga sparade markeringar
 @msg	no saved themes	inga sparade teman
 @msg	no segment {segment} on line {line}	inget segment {segment} på rad {line}

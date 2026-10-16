@@ -535,6 +535,7 @@
 	Convert to RGB	Μετατροπή σε RGB
 	Convert to Shape	Μετατροπή σε σχήμα
 	Convert to sRGB	Μετατροπή σε sRGB
+	Convert to Straight Lines	Μετατροπή σε ευθείες γραμμές
 	Convert:	Μετατροπή:
 	Copied the CSS of {rules} object(s)	Αντιγράφηκαν οι κανόνες CSS από {rules} αντικείμενα
 	Copies:	Αντίγραφα:
@@ -553,6 +554,7 @@
 	Copyright Notice:	Σημείωση πνευματικών δικαιωμάτων:
 	Copyright Status:	Κατάσταση πνευματικών δικαιωμάτων:
 	Copyright Symbol	Σύμβολο πνευματικών δικαιωμάτων
+	Corner Point Angle Threshold:	Όριο γωνίας γωνιακών σημείων:
 	Corner Radius	Ακτίνα γωνίας
 	Corner Radius:	Ακτίνα γωνίας:
 	Corner:	Γωνία:
@@ -1247,6 +1249,14 @@
 	Hyphenate	Συλλαβισμός
 	Hyphenation	Συλλαβισμός
 	Hyphenation…	Συλλαβισμός…
+	Words Longer Than:	Λέξεις μεγαλύτερες από:
+	After First:	Μετά τα πρώτα:
+	Before Last:	Πριν από τα τελευταία:
+	Hyphen Limit:	Όριο ενωτικών:
+	Hyphenation Zone:	Ζώνη συλλαβισμού:
+	letters	γράμματα
+	hyphens	ενωτικά
+	Hyphenate Capitalized Words	Συλλαβισμός λέξεων με κεφαλαίο αρχικό
 	ICC Profile	Προφίλ ICC
 	Identify Objects By	Αναγνώριση αντικειμένων κατά
 	Ignore	Παράβλεψη
@@ -1513,6 +1523,7 @@
 	Other	Άλλο
 	Outer Glow…	Εξωτερική λάμψη…
 	Outline	Περίγραμμα
+	Outline Object	Μετατροπή αντικειμένου σε περιγράμματα
 	Outline Stroke	Μετατροπή περιγράμματος σε διαδρομή
 	Output	Έξοδος
 	Output:	Έξοδος:
@@ -1623,6 +1634,7 @@
 	Save for Web (Legacy)…	Αποθήκευση για ιστό (παλαιού τύπου)…
 	Save Preset…	Αποθήκευση προεπιλογής…
 	Save Selection…	Αποθήκευση επιλογής…
+	Update Selection	Ενημέρωση επιλογής
 	Saved	Αποθηκεύτηκε
 	Save…	Αποθήκευση…
 	Scale	Κλιμάκωση
@@ -3138,6 +3150,7 @@ theme	Appearance	Εμφάνιση
 	Show Modified	Εμφάνιση τροποποιημένων
 	Show Note	Εμφάνιση σημείωσης
 	Show Options	Εμφάνιση επιλογών
+	Show Original Path	Εμφάνιση αρχικής διαδρομής
 	Show Package	Εμφάνιση συσκευασίας
 	Show Panel	Εμφάνιση πίνακα
 	Show Pattern Swatches	Εμφάνιση δειγμάτων μοτίβου
@@ -3777,6 +3790,7 @@ theme	Appearance	Εμφάνιση
 @msg	no saved presets	δεν υπάρχουν αποθηκευμένες προεπιλογές
 @msg	no saved print preset named `{name}` ({DEFAULT_PRESET} is protected: start a new one from it)	δεν υπάρχει αποθηκευμένη προεπιλογή εκτύπωσης με όνομα `{name}` (η {DEFAULT_PRESET} προστατεύεται: δημιουργήστε νέα από αυτήν)
 @msg	no saved profiles	δεν υπάρχουν αποθηκευμένα προφίλ
+@msg	no saved selection recalled	δεν έχει ανακληθεί αποθηκευμένη επιλογή
 @msg	no saved selections	δεν υπάρχουν αποθηκευμένες επιλογές
 @msg	no saved themes	δεν υπάρχουν αποθηκευμένα θέματα
 @msg	no segment {segment} on line {line}	δεν υπάρχει τμήμα {segment} στη γραμμή {line}

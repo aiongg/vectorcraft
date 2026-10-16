@@ -576,6 +576,7 @@
 	Convert to RGB	Converti in RGB
 	Convert to Shape	Converti in forma
 	Convert to sRGB	Converti in sRGB
+	Convert to Straight Lines	Converti in linee rette
 	Convert:	Converti:
 	Copied the CSS of {rules} object(s)	CSS copiato da {rules} oggetto/i
 	Copies:	Copie:
@@ -594,6 +595,7 @@
 	Copyright Notice:	Nota sul copyright:
 	Copyright Status:	Stato copyright:
 	Copyright Symbol	Simbolo di copyright
+	Corner Point Angle Threshold:	Soglia angolo dei punti d'angolo:
 	Corner Radius	Raggio angolo
 	Corner Radius:	Raggio angolo:
 	Corner:	Angolo:
@@ -1308,6 +1310,14 @@
 	Hyphenate	Sillaba
 	Hyphenation	Sillabazione
 	Hyphenation…	Sillabazione…
+	Words Longer Than:	Parole con più di:
+	After First:	Dopo le prime:
+	Before Last:	Prima delle ultime:
+	Hyphen Limit:	Limite trattini:
+	Hyphenation Zone:	Zona di sillabazione:
+	letters	lettere
+	hyphens	trattini
+	Hyphenate Capitalized Words	Sillaba parole con iniziale maiuscola
 	ICC Profile	Profilo ICC
 	Identify Objects By	Identifica oggetti per
 	Ignore	Ignora
@@ -1987,6 +1997,7 @@
 	Out Tangent Handles	Maniglie tangente in uscita
 	Outer Glow…	Bagliore esterno…
 	Outline	Contorno
+	Outline Object	Contorna oggetto
 	Outline Others	Altri in contorno
 	Outline Stroke	Contorna traccia
 	Outline Text	Contorna testo
@@ -2526,6 +2537,7 @@
 	Save Save for Web Preset	Salva preset di Salva per il web
 	Save selected colors as swatches	Salva i colori selezionati come campioni
 	Save Selection…	Salva selezione…
+	Update Selection	Aggiorna selezione
 	Save Swatch Library	Salva libreria campioni
 	Save Swatch Library…	Salva libreria campioni…
 	Save the current layout under this name	Salva il layout corrente con questo nome
@@ -2764,6 +2776,7 @@
 	Show Modified	Mostra modificati
 	Show Note	Mostra nota
 	Show Options	Mostra opzioni
+	Show Original Path	Mostra tracciato originale
 	Color Panel Options	Opzioni pannello Colore
 	Show Package	Mostra pacchetto
 	Show Panel	Mostra pannello
@@ -3815,6 +3828,7 @@ axis	Both	Entrambi
 @msg	no saved presets	nessun preset salvato
 @msg	no saved print preset named `{name}` ({DEFAULT_PRESET} is protected: start a new one from it)	nessun preset di stampa salvato denominato `{name}` ({DEFAULT_PRESET} è protetto: creane uno nuovo a partire da esso)
 @msg	no saved profiles	nessun profilo salvato
+@msg	no saved selection recalled	nessuna selezione salvata richiamata
 @msg	no saved selections	nessuna selezione salvata
 @msg	no saved themes	nessun tema salvato
 @msg	no segment {segment} on line {line}	nessun segmento {segment} alla riga {line}

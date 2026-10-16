@@ -210,6 +210,7 @@
 	Join	連結
 	Average…	平均…
 	Outline Stroke	パスのアウトライン
+	Outline Object	オブジェクトのアウトライン
 	Offset Path…	パスのオフセット…
 	Reverse Path Direction	パスの方向反転
 	Simplify…	単純化…
@@ -393,6 +394,7 @@
 	Area Text Objects	エリア内文字オブジェクト
 	Start Global Edit	グローバル編集を開始
 	Save Selection…	選択範囲を保存…
+	Update Selection	選択範囲を更新
 	Edit Selection…	選択範囲を編集…
 	Effect	効果
 	Apply Last Effect	前回の効果を適用
@@ -1089,6 +1091,7 @@
 	Convert Process to Global	プロセスカラーをグローバルに変換
 	Convert text to outlines	テキストをアウトラインに変換
 	Convert to sRGB	sRGB に変換
+	Convert to Straight Lines	直線に変換
 	Copies:	コピー:
 	Copy (make a transformed copy)	コピー (変形したコピーを作成)
 	Copy All Styles	すべてのスタイルをコピー
@@ -1100,6 +1103,7 @@
 	Copyright Info URL:	著作権情報の URL:
 	Copyright Notice:	著作権表示:
 	Copyright Status:	著作権の状態:
+	Corner Point Angle Threshold:	コーナーポイントの角度のしきい値:
 	Corner Radius	角の半径
 	Corner Radius:	角丸の半径:
 	Corner:	角の形状:
@@ -1548,6 +1552,14 @@
 	Hyphenate	ハイフネーション
 	Hyphenation	ハイフネーション
 	Hyphenation…	ハイフネーション…
+	Words Longer Than:	次の文字数を超える単語:
+	After First:	語頭の文字数:
+	Before Last:	語尾の文字数:
+	Hyphen Limit:	連続ハイフンの上限:
+	Hyphenation Zone:	ハイフネーションゾーン:
+	letters	文字
+	hyphens	個
+	Hyphenate Capitalized Words	大文字で始まる単語をハイフネーション
 	ICC Profile	ICC プロファイル
 	Identify Objects By	オブジェクトの識別方法
 	Ignore	無視
@@ -2580,6 +2592,7 @@
 	Show List View	リスト表示
 	Show Note	メモを表示
 	Show Options	オプションを表示
+	Show Original Path	元のパスを表示
 	Color Panel Options	カラーパネルオプション
 	Show Package	パッケージを表示
 	Show Panel	パネルを表示
@@ -3663,6 +3676,7 @@ swatch	Bright Violet	ビビッドバイオレット
 @msg	Make Guides: select paths	ガイドを作成: パスを選択してください
 @msg	Release Guides: no guides	ガイドを解除: ガイドがありません
 @msg	guides are locked	ガイドがロックされています
+@msg	no saved selection recalled	保存した選択範囲を呼び出していません
 @msg	no saved selections	保存した選択範囲はありません
 @msg	no such artboard	指定されたアートボードが見つかりません
 @msg	cannot split an open path at its end point	オープンパスは端点で分割できません

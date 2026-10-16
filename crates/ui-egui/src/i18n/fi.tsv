@@ -209,6 +209,7 @@
 	Join	Liitä
 	Average…	Keskiarvota…
 	Outline Stroke	Ääriviivaa viiva
+	Outline Object	Muunna objekti ääriviivoiksi
 	Offset Path…	Siirrä polkua…
 	Reverse Path Direction	Käännä polun suunta
 	Simplify…	Yksinkertaista…
@@ -388,6 +389,7 @@
 	Area Text Objects	Aluetekstiobjektit
 	Start Global Edit	Aloita yleismuokkaus
 	Save Selection…	Tallenna valinta…
+	Update Selection	Päivitä valinta
 	Edit Selection…	Muokkaa valintaa…
 	Effect	Tehoste
 	Apply Last Effect	Käytä viimeisintä tehostetta
@@ -1543,6 +1545,9 @@ lighting	Light	Valo
 	Updated {} image(s)	Päivitetty {} kuva(a)
 	Break Link	Katkaise linkki
 	Tolerance:	Toleranssi:
+	Corner Point Angle Threshold:	Kulmapisteiden kulmakynnys:
+	Convert to Straight Lines	Muunna suoriksi viivoiksi
+	Show Original Path	Näytä alkuperäinen polku
 	Transparency Options	Läpinäkyvyysasetukset
 	Color Mixer (Shift-click the chip)	Värisekoitin (Vaihto-napsauta värilaattaa)
 	Fill: click for swatches, Shift-click for the color mixer	Täyttö: napsauta avataksesi värimallit, Vaihto-napsauta avataksesi värisekoittimen
@@ -1567,6 +1572,14 @@ lighting	Light	Valo
 	Every-line Composer	Kaikkien rivien asettelu
 	First-line Left Indent	Ensimmäisen rivin vasen sisennys
 	Hyphenation…	Tavutus…
+	Words Longer Than:	Sanat, jotka ovat pidempiä kuin:
+	After First:	Ensimmäisten jälkeen:
+	Before Last:	Ennen viimeisiä:
+	Hyphen Limit:	Tavuviivaraja:
+	Hyphenation Zone:	Tavutusalue:
+	letters	kirjainta
+	hyphens	tavuviivaa
+	Hyphenate Capitalized Words	Tavuta isolla alkukirjaimella alkavat sanat
 	Justification…	Tasaus…
 	Justify with last line aligned center	Tasaa molemmat reunat, viimeinen rivi keskelle
 	Justify with last line aligned right	Tasaa molemmat reunat, viimeinen rivi oikealle
@@ -4036,6 +4049,7 @@ imageTrace	Outline	Ääriviiva
 @msg	no saved presets	ei tallennettuja esiasetuksia
 @msg	no saved print preset named `{name}` ({DEFAULT_PRESET} is protected: start a new one from it)	ei tallennettua tulostuksen esiasetusta nimeltä `{name}` ({DEFAULT_PRESET} on suojattu: luo uusi sen pohjalta)
 @msg	no saved profiles	ei tallennettuja profiileja
+@msg	no saved selection recalled	tallennettua valintaa ei ole palautettu
 @msg	no saved selections	ei tallennettuja valintoja
 @msg	no saved themes	ei tallennettuja teemoja
 @msg	no segment {segment} on line {line}	ei segmenttiä {segment} viivalla {line}
