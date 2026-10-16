@@ -730,6 +730,7 @@ fn docked_sets(ui: &UiState) -> Vec<(u32, Vec<usize>)> {
 pub(crate) fn docked_columns(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> Vec<Rect> {
     let t = Tokens::get(ui.ctx());
     let mut rects = vec![];
+    let mut drawn = vec![];
     let mut action = None;
     for (_, set) in docked_sets(&app.ui) {
         let groups = shown_groups(&app.ui, &set);
@@ -775,7 +776,11 @@ pub(crate) fn docked_columns(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> Vec
                 });
             });
         rects.push(panel.response.rect);
+        let key = crate::workspaces::column_key(first);
+        crate::workspaces::note_dock_width(&mut app.ui, &key, panel.response.rect.width());
+        drawn.push(key);
     }
+    app.ui.dock_widths.retain(|key, _| crate::workspaces::column_first(key).is_none() || drawn.contains(key));
     ui.ctx().data_mut(|d| {
         let icons = d.get_temp::<Rect>(icons_rect_id());
         if let Some(left) = icons.map(|r| rects.iter().map(|r| r.left()).fold(r.left(), f32::min)) {

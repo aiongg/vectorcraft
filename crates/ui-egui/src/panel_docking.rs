@@ -680,6 +680,9 @@ pub(crate) fn show(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> bool {
         let panel = if collapsed { panel.exact_size(38.0).resizable(false) } else { panel };
         let shown = panel.show(ui, |ui| crate::theme::card(ui, &t, egui::Margin { left: 0, right: 6, top: 6, bottom: 6 }, &mut draw));
         ui.ctx().data_mut(|data| data.insert_temp(crate::floating::dock_rect_id(), shown.response.rect));
+        if !collapsed {
+            crate::workspaces::note_dock_width(&mut app.ui, crate::workspaces::SHARED_DOCK, shown.response.rect.width());
+        }
         shown.inner
     } else {
         draw(ui)

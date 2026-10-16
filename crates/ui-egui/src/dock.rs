@@ -78,6 +78,7 @@ fn panel_icon(app: &mut VectorcraftApp, ui: &mut Ui, id: &'static str, label: &s
 }
 
 pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
+    crate::workspaces::restore_dock_widths(&mut app.ui, ui.ctx());
     if crate::panel_docking::show(app, ui) {
         return;
     }
@@ -114,6 +115,9 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
             .response
             .rect
     });
+    if let Some(rect) = group {
+        crate::workspaces::note_dock_width(&mut app.ui, crate::workspaces::DOCK_GROUP, rect.width());
+    }
     // Collapsed icon-panel strip, left of the expanded panel group (like Illustrator's dock). A
     // collapsed group's panels head it, under the « that expands them again. Floating panels leave
     // it.
