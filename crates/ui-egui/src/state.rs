@@ -324,6 +324,14 @@ pub struct UiState {
     /// Invalidates in-flight gestures when a workspace is replaced.
     #[serde(skip)]
     pub docking_generation: u64,
+    /// The dock columns' widths as last drawn, by column key (`workspaces::dock_panel_id`), saved
+    /// with a workspace.
+    #[serde(skip)]
+    pub dock_widths: std::collections::BTreeMap<String, f32>,
+    /// Widths an applied workspace gives the dock columns once, on the next frame that draws the
+    /// dock.
+    #[serde(skip)]
+    pub dock_widths_pending: std::collections::BTreeMap<String, f32>,
     /// The Tools panel floats with its top-left corner here (dragged out by its title bar); `None`:
     /// docked at the window's left edge.
     #[serde(default)]
@@ -736,6 +744,8 @@ impl Default for UiState {
             docking_hidden: Default::default(),
             docking_icons: Default::default(),
             docking_generation: 0,
+            dock_widths: Default::default(),
+            dock_widths_pending: Default::default(),
             toolbar_pos: None,
             status_bar: true,
             dock: true,

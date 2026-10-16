@@ -117,6 +117,28 @@ fn saved_workspace_restores_the_custom_tree_and_hidden_panel_placement() {
 }
 
 #[test]
+fn saved_workspace_restores_the_dock_width_once_and_the_edge_still_drags() {
+    let mut h = harness(app(), vec2(1280.0, 800.0));
+    let dock = |h: &Harness<'static, VectorcraftApp>| egui::containers::panel::PanelState::load(&h.ctx, egui::Id::new("dock")).unwrap().outer_rect;
+    let edge = |r: egui::Rect| egui::pos2(r.left(), r.center().y);
+    let start = dock(&h);
+    drag(&mut h, edge(start), edge(start) - vec2(120.0, 0.0));
+    let wide = dock(&h).width();
+    assert!(wide > start.width() + 100.0, "{wide} vs {}", start.width());
+    h.state_mut().run("window.workspace.new", json!({"name":"Wide dock"})).unwrap();
+    let r = dock(&h);
+    drag(&mut h, edge(r), edge(r) + vec2(150.0, 0.0));
+    let narrow = dock(&h).width();
+    assert!(narrow < wide - 100.0, "{narrow} vs {wide}");
+    h.state_mut().run("window.workspace", json!({"name":"Wide dock"})).unwrap();
+    h.run_steps(2);
+    assert!((dock(&h).width() - wide).abs() < 1.0, "{} vs {wide}", dock(&h).width());
+    let r = dock(&h);
+    drag(&mut h, edge(r), edge(r) + vec2(80.0, 0.0));
+    assert!(dock(&h).width() < wide - 50.0, "{} vs {wide}", dock(&h).width());
+}
+
+#[test]
 fn legacy_float_group_aliases_use_atomic_shared_groups_and_preserve_tools() {
     let mut app = app();
     app.run("window.panel.float", json!({"panel":"layers","group":true,"x":30,"y":50})).unwrap();

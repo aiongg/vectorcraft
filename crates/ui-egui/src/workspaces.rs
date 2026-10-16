@@ -2,6 +2,7 @@
 //! Reset, New Workspace…, Manage Workspaces…. A workspace is a snapshot of `UiState` layout
 //! flags; UI brightness and everything else is untouched when switching.
 
+use std::collections::BTreeMap;
 use std::sync::atomic::Ordering;
 
 use serde::{Deserialize, Serialize};
@@ -41,6 +42,10 @@ pub struct Workspace {
     pub docking_icons: std::collections::BTreeSet<String>,
     /// Where the Tools panel floats (built-in workspaces: docked).
     pub toolbar_pos: Option<[f32; 2]>,
+    /// Dock column widths in points, by column key (see [`dock_panel_id`]). Empty (built-in
+    /// workspaces, workspaces saved without them): applying keeps the current widths.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub dock_widths: BTreeMap<String, f32>,
 }
 
 impl Default for Workspace {
@@ -140,6 +145,7 @@ pub fn capture(ui: &UiState, name: &str) -> Workspace {
         docking_hidden: ui.docking_hidden.clone(),
         docking_icons: ui.docking_icons.clone(),
         toolbar_pos: ui.toolbar_pos,
+        dock_widths: ui.dock_widths.clone(),
     }
 }
 
@@ -167,7 +173,67 @@ pub fn apply(ui: &mut UiState, w: &Workspace) {
     ui.toolbar_pos = w.toolbar_pos;
     FloatingPanels::sanitize(&mut ui.floating_panels, &mut ui.toolbar_pos);
     ui.flyout = None;
+    ui.dock_widths_pending =
+        w.dock_widths.iter().filter(|(_, width)| width.is_finite() && **width > 0.0).take(64).map(|(k, width)| (k.clone(), *width)).collect();
+    ui.dock_widths.extend(ui.dock_widths_pending.iter().map(|(k, width)| (k.clone(), *width)));
     ui.workspace = w.name.clone();
+}
+
+/// The dock's tabbed panel group (the legacy dock).
+pub const DOCK_GROUP: &str = "dock";
+/// The shared docking tree's column.
+pub const SHARED_DOCK: &str = "shared-panel-dock";
+const COLUMN_PREFIX: &str = "dock-column:";
+
+/// The width key of the docked column headed by panel `first`.
+pub fn column_key(first: &str) -> String {
+    format!("{COLUMN_PREFIX}{first}")
+}
+
+/// The panel heading the docked column of width key `key`, if it is a [`column_key`].
+pub fn column_first(key: &str) -> Option<&str> {
+    key.strip_prefix(COLUMN_PREFIX)
+}
+
+/// The egui panel id of a dock width key: [`DOCK_GROUP`], [`SHARED_DOCK`] or a [`column_key`].
+pub fn dock_panel_id(key: &str) -> egui::Id {
+    match column_first(key) {
+        Some(first) => egui::Id::new(("dock-column", first)),
+        None => egui::Id::new(key),
+    }
+}
+
+/// Note a dock column's width as drawn this frame.
+pub fn note_dock_width(ui: &mut UiState, key: &str, width: f32) {
+    match ui.dock_widths.get_mut(key) {
+        Some(w) => *w = width,
+        None => {
+            ui.dock_widths.insert(key.to_string(), width);
+        }
+    }
+}
+
+/// Give the dock columns the widths an applied workspace saved, once. A resizable egui panel
+/// takes its size from its state in egui memory, so the user can drag its edge afterwards.
+pub fn restore_dock_widths(ui: &mut UiState, ctx: &egui::Context) {
+    if ui.dock_widths_pending.is_empty() {
+        return;
+    }
+    for (key, width) in std::mem::take(&mut ui.dock_widths_pending) {
+        if key == SHARED_DOCK && ui.dock_collapsed {
+            // Collapsed, the shared dock is icon-wide and overwrites its width: it takes the saved
+            // width when it expands.
+            ui.dock_widths_pending.insert(key, width);
+            continue;
+        }
+        let id = dock_panel_id(&key);
+        ctx.data_mut(|d| {
+            let old = d.get_persisted::<egui::containers::panel::PanelState>(id).map_or(egui::Rect::ZERO, |s| s.outer_rect);
+            // Only the size counts: the panel lays itself out again from the right edge.
+            let outer_rect = egui::Rect::from_min_max(egui::pos2(old.right() - width, old.top()), old.max);
+            d.insert_persisted(id, egui::containers::panel::PanelState { outer_rect });
+        });
+    }
 }
 
 /// A workspace by name (user workspaces shadow nothing: names are unique across both lists).
@@ -468,6 +534,22 @@ mod tests {
         let back: UiState = serde_json::from_value(serde_json::to_value(&ui).unwrap()).unwrap();
         assert_eq!(back.custom_workspaces, ui.custom_workspaces);
         assert_eq!(back.workspace, "Mine");
+    }
+
+    #[test]
+    fn workspace_saved_without_dock_widths_loads_and_keeps_the_current_widths() {
+        let old: Workspace = serde_json::from_value(json!({"name": "Old", "dock": true, "openPanel": "stroke"})).unwrap();
+        assert!(old.dock_widths.is_empty());
+        let mut ui = UiState { custom_workspaces: vec![old], ..Default::default() };
+        ui.dock_widths.insert(DOCK_GROUP.into(), 410.0);
+        let w = find(&ui, "Old").unwrap();
+        apply(&mut ui, &w);
+        assert!(ui.dock_widths_pending.is_empty());
+        assert_eq!(ui.dock_widths.get(DOCK_GROUP), Some(&410.0));
+        // Saved again, the widths go with it.
+        save_as(&mut ui, "New").unwrap();
+        let back: Workspace = serde_json::from_value(serde_json::to_value(find(&ui, "New").unwrap()).unwrap()).unwrap();
+        assert_eq!(back.dock_widths.get(DOCK_GROUP), Some(&410.0));
     }
 
     #[test]
