@@ -26,7 +26,7 @@ use std::sync::{Arc, Mutex};
 use serde_json::{Value, json};
 use vectorcraft_doc::hit::hit_test;
 use vectorcraft_doc::{NodeId, NodeKind, TextKind, TextObject, TextRun};
-use vectorcraft_geom::{BezPath, Point, Rect, Shape};
+use vectorcraft_geom::{Affine, BezPath, Point, Rect, Shape};
 use vectorcraft_text::{FontDb, TextLayout, edit};
 
 use crate::guides::DrawSnap;
@@ -111,9 +111,12 @@ impl SelectedLayouts {
         let mut old = std::mem::take(&mut *c);
         for id in &cx.selection.objects {
             let Some(t) = TypeTool::text(cx, *id).filter(|t| !matches!(t.kind, TextKind::Point)) else { continue };
+            // Layout ignores `xf`, so a move reuses the cached layout.
+            let mut key = t.clone();
+            key.xf = Affine::IDENTITY;
             let entry = match old.remove(id) {
-                Some(e) if e.0.0 == fonts && e.0.1 == *t => e,
-                _ => ((fonts, t.clone()), Arc::new(vectorcraft_text::layout(FontDb::global(), t))),
+                Some(e) if e.0.0 == fonts && e.0.1 == key => e,
+                _ => ((fonts, key), Arc::new(vectorcraft_text::layout(FontDb::global(), t))),
             };
             if Some(*id) != skip {
                 overflow_marker(t, &entry.1, cx, o);
