@@ -509,7 +509,7 @@ fn ask_eps_options(app: &mut VectorcraftApp, mode: SaveMode, path: &str) -> Resu
     p["path"] = json!(path);
     p["__save"] = json!(mode.command());
     dialogs::eps_options::open(app, &p);
-    let d = app.ui.dialog.as_ref().ok_or("EPS Options didn't open")?;
+    let d = app.ui.dialog.as_ref().ok_or("the EPS Options dialog didn't open")?;
     Ok(json!({ "pending": d.kind }))
 }
 
