@@ -135,11 +135,16 @@ pub fn backends(default: Backends, env_set: bool) -> Backends {
     if cfg!(windows) && !env_set { Backends::DX12 | Backends::GL } else { default }
 }
 
-/// The largest texture side to ask the device for, which bounds the window's surface: the
-/// adapter's own limit when it is above eframe's `default` (8192 px), so a window larger than
-/// that keeps its surface (#1459). Never below `default`, which is what was asked for before.
-pub fn surface_limit(default: u32, adapter: u32) -> u32 {
-    default.max(adapter)
+/// The limits to ask the window's device for, given eframe's `requested` ones and the adapter's.
+/// Each limit the adapter can't meet drops to the adapter's value: eframe asks for wgpu's defaults
+/// whatever the adapter offers, and one short limit fails the whole device (a Raspberry Pi 5 has
+/// 15 inter-stage variables and 4096 px GL textures, #2105). The largest texture side is the
+/// adapter's own, which bounds the window's surface: a window wider than eframe's 8192 px keeps
+/// its surface on an adapter that allows more (#1459).
+pub fn device_limits(requested: wgpu::Limits, adapter: &wgpu::Limits) -> wgpu::Limits {
+    let mut limits = requested.or_worse_values_from(adapter);
+    limits.max_texture_dimension_2d = adapter.max_texture_dimension_2d;
+    limits
 }
 
 /// One adapter, as [`adapter_order`] sees it.
@@ -886,11 +891,25 @@ mod tests {
     }
 
     /// #1459: a 9048 px wide window (two display scales' ratio past 8192) fits an adapter that
-    /// takes 16384 px textures; an adapter with less than eframe asks for changes nothing.
+    /// takes 16384 px textures.
     #[test]
     fn the_surface_may_be_as_large_as_the_adapter_allows() {
-        assert_eq!(surface_limit(8192, 16384), 16384);
-        assert_eq!(surface_limit(8192, 4096), 8192);
+        let requested = wgpu::Limits { max_texture_dimension_2d: 8192, ..wgpu::Limits::default() };
+        let adapter = wgpu::Limits { max_texture_dimension_2d: 16384, ..wgpu::Limits::default() };
+        assert_eq!(device_limits(requested.clone(), &adapter).max_texture_dimension_2d, 16384);
+        assert_eq!(device_limits(requested.clone(), &adapter), wgpu::Limits { max_texture_dimension_2d: 16384, ..requested });
+    }
+
+    /// #2105: a Raspberry Pi 5 offers less than eframe asks for, so the device asks for what the
+    /// adapter has instead of failing.
+    #[test]
+    fn the_device_never_asks_for_more_than_the_adapter_offers() {
+        let requested = wgpu::Limits { max_texture_dimension_2d: 8192, ..wgpu::Limits::default() };
+        let adapter = wgpu::Limits { max_texture_dimension_2d: 4096, max_inter_stage_shader_variables: 15, ..wgpu::Limits::default() };
+        let limits = device_limits(requested, &adapter);
+        assert_eq!(limits.max_texture_dimension_2d, 4096);
+        assert_eq!(limits.max_inter_stage_shader_variables, 15);
+        assert!(limits.check_limits(&adapter));
     }
 
     fn names(c: &[Candidate], order: &[usize]) -> Vec<String> {
