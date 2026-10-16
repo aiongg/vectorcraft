@@ -2443,11 +2443,7 @@ fn task_bar(app: &mut VectorcraftApp, ui: &mut Ui, xf: &Xf) {
     let is_group = first.as_ref().is_some_and(|f| matches!(f.kind, NodeKind::Group { .. }));
     let is_text = first.as_ref().is_some_and(|f| matches!(f.kind, NodeKind::Text(_)));
     let is_image = first.as_ref().is_some_and(|f| matches!(f.kind, NodeKind::Image(_)));
-    // An Image Trace object: the group the engine names "Image Trace", its source image first.
-    let is_trace = is_group
-        && first.as_ref().is_some_and(|f| {
-            f.name.as_deref() == Some("Image Trace") && f.children().is_some_and(|c| c.first().is_some_and(|i| matches!(i.kind, NodeKind::Image(_))))
-        });
+    let is_trace = first.as_ref().is_some_and(crate::panels::image_trace::is_trace);
     let mut items: Vec<(&str, &str, &str)> = vec![]; // (label, icon, command)
     // As in the reference app, an image offers Image Trace and Crop Image, and traced art offers
     // Expand ("Selecting images displays options like Image Trace, Retype, and Crop Image"; "You
@@ -5351,6 +5347,36 @@ mod tests {
         let mut images = 0;
         expanded.walk(&mut |n| images += usize::from(matches!(n.kind, NodeKind::Image(_))));
         assert_eq!(images, 0, "only the traced paths are kept");
+    }
+
+    /// A clipping group named "Image Trace" with an image first is not an Image Trace object: the
+    /// task bar offers it Ungroup, not the Expand the engine would refuse.
+    #[test]
+    fn the_task_bar_offers_no_expand_for_a_clip_group_named_image_trace() {
+        let mut app = VectorcraftApp::new(Session::new(), Default::default());
+        app.session.execute("file.new", &json!({"width": 400, "height": 300})).unwrap();
+        let mut png = vec![];
+        image::RgbaImage::from_fn(20, 20, |x, _| image::Rgba([if x < 10 { 0 } else { 255 }, 0, 0, 255]))
+            .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+            .unwrap();
+        let data = vectorcraft_format::base64_encode(&png);
+        app.run("file.place", json!({"name": "half.png", "dataBase64": data, "link": false, "at": [200, 150]})).unwrap();
+        app.run("imageTrace.make", json!({"preset": "Default"})).unwrap();
+        app.select_tool("selection");
+        let st = app.session.active_mut().unwrap();
+        let id = st.selection.objects[0];
+        let NodeKind::Group { clip, .. } = &mut st.doc.node_mut(id).unwrap().kind else { panic!("a trace group") };
+        *clip = true;
+        let ctx = egui::Context::default();
+        frame(&mut app, &ctx, vec![]);
+        frame(&mut app, &ctx, vec![]);
+        let bar = task_bar_rect(&ctx).expect("the task bar shows");
+        let at = pos2(bar.left() + 8.0 + 4.0 + 6.0 + 12.0, bar.center().y);
+        let button = |pressed| egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
+        frame(&mut app, &ctx, vec![egui::Event::PointerMoved(at)]);
+        frame(&mut app, &ctx, vec![button(true)]);
+        frame(&mut app, &ctx, vec![button(false)]);
+        assert!(app.session.active().unwrap().doc.node(id).is_none(), "the first button ungrouped the clip group");
     }
 
     /// The Contextual Task Bar's handle drags it: unpinned it keeps that offset as it follows the
