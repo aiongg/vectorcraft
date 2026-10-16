@@ -31,6 +31,7 @@ const ROWS: &[Row] = &[
     (&["rectangularGrid"], None, &["rows", "columns", "rowSkew", "columnSkew", "frame", "fill"]),
     (&["polarGrid"], None, &["concentric", "radial", "concentricSkew", "radialSkew", "compound", "fill"]),
     (&["pencil", "paintbrush"], None, &["fidelity", "fill", "keepSelected", "editWithin", "closeWithin"]),
+    (&["pencil"], None, &["altSmooth"]),
     (&["smooth"], None, &["fidelity"]),
     (&["blobBrush", "eraser"], None, &["size"]),
     (&["blobBrush"], None, &["keepSelected", "mergeOnlySelection"]),
