@@ -373,6 +373,26 @@ fn layer_options_validate_and_template_locks_and_dims() {
     assert_eq!((summary["preview"].clone(), summary["dimImages"].clone()), (json!(false), json!(30)));
 }
 
+/// #1997: a template layer's art takes no clicks and Select All leaves it out while the layer is
+/// locked; unlocked, its art is hit and selected like any other, and the layer stays a dimmed
+/// template.
+#[test]
+fn an_unlocked_template_layer_is_editable() {
+    let mut s = session();
+    let layer = s.doc().unwrap().doc.layers[0].id;
+    let a = rect(&mut s, 0.0);
+    let hit = |s: &Session| {
+        vectorcraft_doc::hit::hit_test(&s.doc().unwrap().doc, vectorcraft_geom::Point::new(10.0, 10.0), Default::default()).map(|h| h.leaf)
+    };
+    run(&mut s, "layer.template", json!({"ids": [layer.0], "on": true}));
+    assert_eq!(hit(&s), None);
+    assert_eq!(run(&mut s, "select.all", json!({}))["count"], 0);
+    run(&mut s, "layer.setProps", json!({"ids": [layer.0], "locked": false}));
+    assert_eq!(hit(&s), Some(a));
+    assert_eq!(run(&mut s, "select.all", json!({}))["count"], 1);
+    assert!(matches!(node(&s, layer).kind, NodeKind::Layer { template: true, dim_images: Some(50), .. }));
+}
+
 #[test]
 fn new_layers_go_above_the_current_one_at_its_level() {
     let mut s = session();

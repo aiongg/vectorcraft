@@ -1267,9 +1267,24 @@ impl Document {
         a.iter().rev().copied().find(|i| self.node(*i).is_some_and(Node::is_layer))
     }
     /// Every art object the Selection tool can reach (Select All): the visible, unlocked objects
-    /// of the visible, unlocked, non-template layers, looking through sublayers (bottom first).
+    /// of the visible, unlocked layers, looking through sublayers (bottom first).
     pub fn selectable_art(&self) -> Vec<NodeId> {
-        self.layers.iter().filter(|l| l.visible && !l.locked && !l.is_template()).flat_map(|l| l.layer_art(true)).collect()
+        self.layers.iter().filter(|l| l.visible && !l.locked).flat_map(|l| l.layer_art(true)).collect()
+    }
+    /// Lock every template layer and sublayer. Files saved before format v4 come from apps in
+    /// which a template layer took no clicks whether it was locked or not; locking keeps them so.
+    pub fn lock_template_layers(&mut self) {
+        let mut ids = vec![];
+        self.walk(|n| {
+            if n.is_template() && !n.locked {
+                ids.push(n.id);
+            }
+        });
+        for id in ids {
+            if let Some(n) = self.node_mut(id) {
+                n.locked = true;
+            }
+        }
     }
     /// Colour of the innermost layer or sublayer containing `id` (selection highlight colour).
     pub fn layer_color(&self, id: NodeId) -> [u8; 3] {

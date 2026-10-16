@@ -307,3 +307,24 @@ fn inline_graphics_in_text_round_trip() {
     assert_eq!(doc_json(&back), doc_json(&d));
     check_native_roundtrip(&d).unwrap();
 }
+
+/// Apps that wrote files before v4 kept template layers out of reach whatever their lock, so an
+/// unlocked template layer in such a file opens locked; in a v4 file it stays unlocked (#1997).
+#[test]
+fn template_layers_of_files_before_v4_open_locked() {
+    let mut d = Document::new(100.0, 100.0);
+    let id = d.add_layer(Some("Sketch"));
+    let sub = d.alloc_id();
+    d.insert(Some(id), 0, Node::layer(sub, "Inner", vectorcraft_doc::LayerColor::Preset(2))).unwrap();
+    for n in [id, sub] {
+        if let NodeKind::Layer { template, .. } = &mut d.node_mut(n).unwrap().kind {
+            *template = true;
+        }
+    }
+    let locked = |v: u32| {
+        let back = load(&save_with(&d, &opts(v, false)).unwrap()).unwrap();
+        [id, sub].map(|n| back.node(n).unwrap().locked)
+    };
+    assert_eq!(locked(3), [true, true]);
+    assert_eq!(locked(VERSION), [false, false]);
+}
