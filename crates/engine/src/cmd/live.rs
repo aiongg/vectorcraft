@@ -13,8 +13,8 @@ use vectorcraft_doc::live::{
     self, BlendDefaults, BlendOrientation, BlendSpacing, BlendSpec, EnvelopeKind, EnvelopeMap, EnvelopeOptions, GradientMesh, MeshAppearance,
     PreserveShape, Spine,
 };
-use vectorcraft_doc::{Appearance, Document, Node, NodeId, NodeKind, Selection};
-use vectorcraft_geom::{Affine, PathData, Point, Vec2};
+use vectorcraft_doc::{Appearance, Document, ImageObject, Node, NodeId, NodeKind, Selection};
+use vectorcraft_geom::{Affine, PathData, Point, SubPath, Vec2};
 
 use super::edit::selected_roots;
 use super::expand::gradient_sampler;
@@ -238,7 +238,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Create Gradient Mesh…",
             ["Object"],
             None,
-            "{ids?, rows?: n (4), cols?: n (4), appearance?: flat|center|edge, highlight?: % (100), at?: [x,y], columns?: as cols} convert filled paths into gradient meshes in their fill colour (a gradient fill: the colour it paints at each point), lightened per `appearance` (with `at`: 1×1 mesh plus lines through that point) → {ids, index?}",
+            "{ids?, rows?: n (4), cols?: n (4), appearance?: flat|center|edge, highlight?: % (100), at?: [x,y], columns?: as cols} convert filled paths into gradient meshes in their fill colour (a gradient fill: the colour it paints at each point), and embedded images into meshes of their picture's colours (linked images are refused: embed them first), lightened per `appearance` (with `at`: 1×1 mesh plus lines through that point) → {ids, index?}",
             has_selection,
             mesh_create
         ),
@@ -1344,18 +1344,31 @@ fn mesh_create(s: &mut Session, p: &Value) -> Result<Value> {
     let (ids, index) = s.edit("Create Gradient Mesh", |d, sel| {
         let mut out = vec![];
         let mut index = None;
+        let mut linked = false;
         for id in &roots {
             let Some(n) = d.node(*id).cloned() else { continue };
-            let Some(path) = outline_of(&n) else { continue };
-            let m = match n.appearance.fill_paint() {
-                // The points take the colours the gradient paints there.
-                Paint::Gradient(g) => {
-                    path.bounds().and_then(|b| GradientMesh::for_path_with(&path, rows, cols, &*gradient_sampler(&g, b))).map(|mut m| {
-                        m.highlight(app, highlight);
-                        m
-                    })
+            let m = if let NodeKind::Image(im) = &n.kind {
+                // A linked image's pixels belong to its file: only an embedded one is meshed.
+                if im.link.is_some() {
+                    linked = true;
+                    continue;
                 }
-                p => GradientMesh::for_path(&path, rows, cols, p.color().unwrap_or(Color::WHITE), app, highlight),
+                image_mesh(d, im, rows, cols).map(|mut m| {
+                    m.highlight(app, highlight);
+                    m
+                })
+            } else {
+                let Some(path) = outline_of(&n) else { continue };
+                match n.appearance.fill_paint() {
+                    // The points take the colours the gradient paints there.
+                    Paint::Gradient(g) => {
+                        path.bounds().and_then(|b| GradientMesh::for_path_with(&path, rows, cols, &*gradient_sampler(&g, b))).map(|mut m| {
+                            m.highlight(app, highlight);
+                            m
+                        })
+                    }
+                    p => GradientMesh::for_path(&path, rows, cols, p.color().unwrap_or(Color::WHITE), app, highlight),
+                }
             };
             let Some(mut m) = m else { continue };
             if let Some(q) = at {
@@ -1370,8 +1383,11 @@ fn mesh_create(s: &mut Session, p: &Value) -> Result<Value> {
             *d.node_mut(*id).ok_or(EngineError::NoNode(*id))? = mn;
             out.push(*id);
         }
+        if out.is_empty() && linked {
+            return Err(bad(C, "a linked image can't become a gradient mesh: embed it first (Links panel › Embed Image)"));
+        }
         if out.is_empty() {
-            return Err(bad(C, "select a path or compound path"));
+            return Err(bad(C, "select a path, compound path or embedded image"));
         }
         sel.set(out.iter().copied());
         Ok((out, index))
@@ -1381,6 +1397,30 @@ fn mesh_create(s: &mut Session, p: &Value) -> Result<Value> {
         r["index"] = json!(i);
     }
     Ok(r)
+}
+
+/// Create Gradient Mesh on embedded image `im`: its placed box meshed, each point taking the
+/// picture's colour and opacity there (white at opacity 0 where it is transparent).
+fn image_mesh(d: &Document, im: &ImageObject, rows: u32, cols: u32) -> Option<GradientMesh> {
+    let blob = d.images.get(&im.key)?;
+    let det = im.xf.determinant();
+    if im.width == 0 || im.height == 0 || !det.is_finite() || det.abs() < 1e-12 {
+        return None;
+    }
+    let (w, h) = (f64::from(im.width), f64::from(im.height));
+    let corners = [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)].map(|(x, y)| im.xf * Point::new(x, y));
+    let path = PathData::new(vec![SubPath::polyline(&corners, true)]);
+    let to_pixels = im.xf.inverse();
+    let color_at = |p: Point| {
+        let q = to_pixels * p;
+        // Points on the right and bottom edges take the last column's and row's pixels.
+        let (x, y) = (q.x.clamp(0.0, w - 0.5), q.y.clamp(0.0, h - 0.5));
+        match blob.sample_object(x, y, (im.width, im.height), 1) {
+            Some([r, g, b, a]) => (Color::rgb8(r, g, b), f32::from(a) / 255.0),
+            None => (Color::WHITE, 0.0),
+        }
+    };
+    GradientMesh::for_path_with(&path, rows, cols, &color_at)
 }
 
 /// Run `f` on the gradient mesh `p.id` (one undo step `label`); with `envelopes`, a mesh
