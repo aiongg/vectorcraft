@@ -512,7 +512,7 @@ fn set_gradient_geom(s: &mut Session, p: &Value) -> Result<Value> {
     let stroke = edits_stroke(s, p, item, !s.fill_active)?;
     let item = item.of_kind(s, !stroke);
     let targets = match item {
-        ItemTarget::Top => leaf_targets(s, &ids_param(p, "ids").map_or_else(|| selected_roots(s), |ids| Ok(outermost(&s.doc()?.doc, ids)))?)?,
+        ItemTarget::Top => leaf_targets(s, &ids_param(p, "ids")?.map_or_else(|| selected_roots(s), |ids| Ok(outermost(&s.doc()?.doc, ids)))?)?,
         _ => item.targets(s, p)?,
     };
     if targets.is_empty() {

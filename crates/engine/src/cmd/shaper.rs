@@ -742,7 +742,7 @@ fn select(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"id": target.0}))
 }
 fn target(s: &Session, p: &Value) -> Result<NodeId> {
-    let id = id_param(p, "id")
+    let id = id_param(p, "id")?
         .or_else(|| s.active().and_then(|d| d.selection.objects.first().copied()))
         .ok_or_else(|| bad("shaper.release", "select a Shaper group"))?;
     s.doc()?.doc.node(id).filter(|n| n.extras().shaper.is_some()).ok_or_else(|| bad("shaper.release", "select a Shaper group"))?;

@@ -61,7 +61,7 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
     // Bad parameters fail before anything runs.
     let mut params = Value::Object(m.resolve_params(&plugin_params(p)).map_err(|e| bad(C, e.to_string()))?);
     let st = s.doc()?;
-    let selected = ids_param(p, "ids").unwrap_or_else(|| st.selection.objects.clone());
+    let selected = ids_param(p, "ids")?.unwrap_or_else(|| st.selection.objects.clone());
     let inputs = objects::filter_targets(&st.doc, &selected);
     let parent = st.insertion_parent();
     let bounds = st.doc.bounds_of(&inputs, false);

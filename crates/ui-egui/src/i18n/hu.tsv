@@ -4150,6 +4150,7 @@ imageTrace	Outline	Körvonal
 @msg	`gradient` must be an object	`gradient`: objektum kell
 @msg	`id` is the step reference {r}, which only `run` and `command_batch` resolve	az `id` lépéshivatkozás ({r}), ezt csak a `run` és a `command_batch` oldja fel
 @msg	`ids` must be an array of object ids, not {v}	`ids`: objektumazonosítók tömbje kell, ez nem az: {v}
+@msg	`{key}` must be an array of object ids, not {v}	`{key}`: objektumazonosítók tömbje kell, ez nem az: {v}
 @msg	`library` is a library id or name (see {list})	a `library` könyvtárazonosító vagy -név lehet (lásd: {list})
 @msg	`mode` applies to freeform gradients	a `mode` a szabad formájú színátmenetekre vonatkozik
 @msg	`sampleSize` must be 1, 3 or 5	`sampleSize`: 1, 3 vagy 5 kell
@@ -4524,6 +4525,7 @@ imageTrace	Outline	Körvonal
 @msg	nothing to warp	nincs mit torzítani
 @msg	nothing to wrap	nincs mit körbefuttatni
 @msg	object ids are non-negative integers, not {v}	az objektumazonosító nemnegatív egész szám, ez nem az: {v}
+@msg	`{key}`: object ids are non-negative integers, not {v}	`{key}`: az objektumazonosító nemnegatív egész szám, ez nem az: {v}
 @msg	object {0} cannot have children	ennek az objektumnak nem lehetnek gyermekei: {0}
 @msg	object {id} is not a path	az objektum nem útvonal: {id}
 @msg	object {id} is not a selected top-level object	az objektum nem kijelölt legfelső szintű objektum: {id}

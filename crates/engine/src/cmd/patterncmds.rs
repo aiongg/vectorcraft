@@ -198,7 +198,7 @@ fn ids_json(ids: &[NodeId]) -> Value {
 }
 
 fn roots(s: &Session, p: &Value) -> Result<Vec<NodeId>> {
-    match ids_param(p, "ids") {
+    match ids_param(p, "ids")? {
         Some(ids) => {
             let st = s.doc()?;
             let mut sel = Selection::default();
@@ -620,7 +620,7 @@ fn pattern_transform(s: &mut Session, p: &Value) -> Result<Value> {
 /// Make a repeat from the selection, or switch the selected repeat's kind.
 fn make_repeat(s: &mut Session, p: &Value, label: &str, make: impl Fn(Vec<Arc<Node>>) -> RepeatSpec) -> Result<Value> {
     let existing = selected_repeats(s);
-    if ids_param(p, "ids").is_none()
+    if ids_param(p, "ids")?.is_none()
         && let [r] = existing.as_slice()
     {
         let r = *r;

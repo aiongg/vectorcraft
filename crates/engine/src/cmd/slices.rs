@@ -193,7 +193,7 @@ impl Session {
 /// The slices a command acts on: `slices` (ids that must all be slices), else the selected ones.
 fn slice_targets(s: &Session, p: &Value, cmd: &str) -> Result<Vec<NodeId>> {
     let st = s.doc()?;
-    match ids_param(p, "slices") {
+    match ids_param(p, "slices")? {
         Some(ids) => match ids.iter().find(|id| !st.doc.is_slice(**id)) {
             Some(id) => Err(bad(cmd, format!("{id} is not a slice"))),
             None => Ok(dedup(ids)),
@@ -279,7 +279,7 @@ pub(crate) fn options_json(o: &SliceOptions) -> Value {
 // ---------- Object → Slice ----------
 
 fn make(s: &mut Session, p: &Value) -> Result<Value> {
-    let ids = match ids_param(p, "ids") {
+    let ids = match ids_param(p, "ids")? {
         Some(ids) => super::edit::outermost(&s.doc()?.doc, ids),
         None => super::edit::selected_roots(s)?,
     };
@@ -644,7 +644,7 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn set_rect(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "object.slice.setRect";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing `id`"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing `id`"))?;
     let r = rect_param(p, C)?;
     let d = &s.doc()?.doc;
     if d.slice(id).is_none() {

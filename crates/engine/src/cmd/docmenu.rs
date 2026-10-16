@@ -642,7 +642,7 @@ fn guide_add(s: &mut Session, p: &Value) -> Result<Value> {
         None => None,
     };
     let st = s.doc()?;
-    let layer = match id_param(p, "layer") {
+    let layer = match id_param(p, "layer")? {
         Some(l) if st.doc.node(l).is_some_and(Node::is_layer) => Some(l),
         Some(_) => return Err(bad("guide.add", "layer must name a layer or sublayer")),
         // Where new art goes (refused when no layer is shown and unlocked), or that group's layer.
@@ -729,7 +729,7 @@ fn guide_set_layer(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "guide.setLayer";
     let d = &s.doc()?.doc;
     let layer =
-        id_param(p, "layer").filter(|l| d.node(*l).is_some_and(Node::is_layer)).ok_or_else(|| bad(C, "layer must name a layer or sublayer"))?;
+        id_param(p, "layer")?.filter(|l| d.node(*l).is_some_and(Node::is_layer)).ok_or_else(|| bad(C, "layer must name a layer or sublayer"))?;
     // As objects dragged in the Layers panel: never onto a locked layer.
     if super::layer::locked_within(d, layer) {
         return Err(EngineError::Other("the layer or group is locked".into()));

@@ -271,7 +271,7 @@ fn update_users(d: &mut Document, kind: Kind, name: &str, old: &Map<String, Valu
 /// Paragraph capture always samples the paragraph at `start`.
 fn selection_attrs(s: &Session, p: &Value, kind: Kind) -> Result<Option<Map<String, Value>>> {
     let d = &s.doc()?.doc;
-    let id = match id_param(p, "id") {
+    let id = match id_param(p, "id")? {
         Some(id) => Some(id),
         None => text_targets(s, &json!({}), "").ok().and_then(|v| v.first().copied()),
     };
@@ -392,8 +392,8 @@ fn apply(s: &mut Session, p: &Value, kind: Kind) -> Result<Value> {
     let style_name = (name != kind.normal()).then(|| name.clone());
     // A Type tool range or whole text objects.
     let text_range = super::typecmd::TextRange::parse(p, &c)?;
-    let range = id_param(p, "id").filter(|_| text_range.is_some());
-    let ids = match range.or_else(|| id_param(p, "id")) {
+    let range = id_param(p, "id")?.filter(|_| text_range.is_some());
+    let ids = match range.or(id_param(p, "id")?) {
         Some(id) => vec![id],
         None => text_targets(s, p, &c)?,
     };

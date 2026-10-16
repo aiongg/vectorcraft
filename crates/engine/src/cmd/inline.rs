@@ -40,7 +40,7 @@ fn insert_inline(s: &mut Session, p: &Value) -> Result<Value> {
     let editing = tool.get("editing").and_then(Value::as_u64).map(NodeId);
     let id = match p.get("id") {
         None | Some(Value::Null) => editing.ok_or_else(|| bad(C, "give `id` (no text is being edited)"))?,
-        Some(_) => id_param(p, "id").ok_or_else(|| bad(C, "`id` must be a node id"))?,
+        Some(_) => id_param(p, "id")?.ok_or_else(|| bad(C, "`id` must be a node id"))?,
     };
     let doc = &s.doc()?.doc;
     let NodeKind::Text(t) = &doc.node(id).ok_or(EngineError::NoNode(id))?.kind else {

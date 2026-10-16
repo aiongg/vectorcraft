@@ -205,7 +205,7 @@ fn ids_json(ids: &[NodeId]) -> Value {
 }
 
 fn roots(s: &Session, p: &Value) -> Result<Vec<NodeId>> {
-    match ids_param(p, "ids").or_else(|| id_param(p, "id").map(|i| vec![i])) {
+    match ids_param(p, "ids")?.or(id_param(p, "id")?.map(|i| vec![i])) {
         Some(mut v) => {
             // Explicit ids: only existing, non-layer objects, none inside another of them.
             let d = &s.doc()?.doc;
@@ -490,7 +490,7 @@ fn brush_freehand(s: &mut Session, p: &Value) -> Result<Value> {
     let name = str_param(p, "brush").map(str::to_string).filter(|n| s.doc().is_ok_and(|st| brush::find(&st.doc, n).is_some()));
     let spec = find_command("path.freehand").ok_or_else(|| EngineError::UnknownCommand("path.freehand".into()))?;
     let r = (spec.run)(s, p)?;
-    let (Some(name), Some(id)) = (name, id_param(&r, "id")) else { return Ok(r) };
+    let (Some(name), Some(id)) = (name, id_param(&r, "id")?) else { return Ok(r) };
     s.edit("Paintbrush", |d, _| {
         if let Some(st) = d.node_mut(id).and_then(|n| n.appearance.stroke_mut()) {
             st.brush = Some(name.clone());

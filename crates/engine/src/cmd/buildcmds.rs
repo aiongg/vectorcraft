@@ -176,7 +176,7 @@ fn has_multi_or_ids(s: &Session) -> std::result::Result<(), String> {
 }
 
 fn root_ids(s: &Session, p: &Value) -> Result<Vec<NodeId>> {
-    let ids = match ids_param(p, "ids").or_else(|| id_param(p, "id").map(|i| vec![i])) {
+    let ids = match ids_param(p, "ids")?.or(id_param(p, "id")?.map(|i| vec![i])) {
         Some(v) => v,
         None => selected_roots(s)?,
     };
@@ -573,7 +573,7 @@ fn lp_fill(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "livePaint.fill";
     let pt = point_param(p, "point").filter(|q| finite(*q)).ok_or_else(|| bad(C, "missing point [x,y]"))?;
     let paint = paint_from(s, p)?.unwrap_or_else(|| s.paint.fill.clone());
-    let group = id_param(p, "group");
+    let group = id_param(p, "group")?;
     let roots = if group.is_none() { root_ids(s, p)? } else { vec![] };
     let (g, face) = s.edit("Live Paint Bucket", |d, sel| {
         let gid = match group {
@@ -600,7 +600,7 @@ fn lp_fill(s: &mut Session, p: &Value) -> Result<Value> {
 fn lp_stroke_edge(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "livePaint.strokeEdge";
     let pt = point_param(p, "point").filter(|q| finite(*q)).ok_or_else(|| bad(C, "missing point [x,y]"))?;
-    let g = id_param(p, "group").ok_or_else(|| bad(C, "missing group"))?;
+    let g = id_param(p, "group")?.ok_or_else(|| bad(C, "missing group"))?;
     let paint = paint_from(s, p)?.unwrap_or_else(|| s.paint.stroke.clone());
     let width = p.get("width").and_then(Value::as_f64).unwrap_or(s.paint.stroke_width.max(0.0));
     if !(0.0..=1000.0).contains(&width) {
@@ -622,7 +622,7 @@ fn lp_stroke_edge(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn lp_info(s: &mut Session, p: &Value) -> Result<Value> {
-    let g = id_param(p, "group").or_else(|| id_param(p, "id")).ok_or_else(|| bad("livePaint.info", "missing group"))?;
+    let g = id_param(p, "group")?.or(id_param(p, "id")?).ok_or_else(|| bad("livePaint.info", "missing group"))?;
     let d = &s.doc()?.doc;
     let n = d.node(g).filter(|n| is_live_paint(n)).ok_or_else(|| bad("livePaint.info", format!("{g} is not a Live Paint group")))?;
     let faces: Vec<Value> = b::faces(n)

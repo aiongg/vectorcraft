@@ -4187,10 +4187,12 @@ axis	Both	Обидві
 	Exit	Вийти
 @msg	`id` is the step reference {r}, which only `run` and `command_batch` resolve	`id` — це посилання на крок {r}, яке розв’язують лише `run` і `command_batch`
 @msg	`ids` must be an array of object ids, not {v}	`ids` має бути масивом ідентифікаторів об’єктів, а не {v}
+@msg	`{key}` must be an array of object ids, not {v}	`{key}` має бути масивом ідентифікаторів об’єктів, а не {v}
 @msg	`corners` must be an array of anchor indices, not {v}	`corners` має бути масивом індексів опорних точок, а не {v}
 @msg	`{text}`: step {i}'s result has no such value (write $$ for a literal $)	`{text}`: у результаті кроку {i} немає такого значення (щоб написати сам $, введіть $$)
 @msg	`{text}`: there is no step {i} before this one (steps count from 0; write $$ for a literal $)	`{text}`: перед цим кроком немає кроку {i} (кроки рахуються з 0; щоб написати сам $, введіть $$)
 @msg	object ids are non-negative integers, not {v}	ідентифікатори об’єктів — невід’ємні цілі числа, а не {v}
+@msg	`{key}`: object ids are non-negative integers, not {v}	`{key}`: ідентифікатори об’єктів — невід’ємні цілі числа, а не {v}
 @msg	automation filesystem access is not granted: read authority is absent: {path}	автоматизація не має доступу до файлової системи: немає права на читання: {path}
 @msg	automation filesystem access is not granted: write authority is absent: {path}	автоматизація не має доступу до файлової системи: немає права на запис: {path}
 @msg	automation path rejected: outside the read root {root}: {path}	шлях автоматизації відхилено: поза кореневою папкою для читання {root}: {path}

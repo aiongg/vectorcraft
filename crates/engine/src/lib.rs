@@ -2209,6 +2209,8 @@ pub(crate) const SELECTS_GIVEN_IDS: &[&str] = &[
 /// The non-empty `ids` given to a command whose params description names `ids` as a key (the
 /// key callers outside the app may pass it, [`cmd::params::takes_key`]).
 fn given_ids(description: &'static str, params: &Value) -> Option<Vec<NodeId>> {
-    let ids = cmd::ids_param(params, "ids").filter(|ids| !ids.is_empty())?;
-    cmd::params::takes_key(description, "ids").then_some(ids)
+    // Integer entries only: some commands' `ids` are other ids (assets'), and a bad object id is
+    // the command's own to reject, naming it (#785).
+    let ids: Vec<NodeId> = params.get("ids")?.as_array()?.iter().filter_map(Value::as_u64).map(NodeId).collect();
+    (!ids.is_empty() && cmd::params::takes_key(description, "ids")).then_some(ids)
 }

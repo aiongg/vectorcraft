@@ -1189,7 +1189,7 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
 /// The selected graph (or the graph containing the selection).
 fn target(s: &Session, p: &Value, cmd: &str) -> Result<NodeId> {
     let st = s.doc()?;
-    let start = id_param(p, "id").into_iter().chain(st.selection.objects.iter().copied());
+    let start = id_param(p, "id")?.into_iter().chain(st.selection.objects.iter().copied());
     for id in start {
         let mut cur = Some(id);
         while let Some(c) = cur {

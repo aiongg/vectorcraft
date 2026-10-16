@@ -757,7 +757,7 @@ fn area_options(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn reshape_area(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "text.reshapeArea";
-    let id = id_param(p, "id").ok_or_else(|| bad(C, "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad(C, "missing id"))?;
     let mut refs = super::select::checked_refs(p.get("anchors"), C)?;
     refs.sort_unstable();
     refs.dedup();

@@ -650,7 +650,7 @@ fn find_replace(s: &mut Session, p: &Value) -> Result<Value> {
     let find = str_param(p, "find").filter(|f| !f.is_empty()).ok_or_else(|| bad(C, "missing `find`"))?.to_string();
     let rep = str_param(p, "replace").unwrap_or("").to_string();
     let (mc, ww) = (bool_or(p, "matchCase", false), bool_or(p, "wholeWord", false));
-    let ids = match ids_param(p, "ids") {
+    let ids = match ids_param(p, "ids")? {
         Some(v) => text_ids(&s.doc()?.doc, &v),
         None => all_texts(&s.doc()?.doc),
     };

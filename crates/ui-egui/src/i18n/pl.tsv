@@ -4293,10 +4293,12 @@ imageTrace	Outline	Kontur
 @msg	Relinked {n} image(s); {name} couldn't be relinked: {reason}	Ponownie połączone obrazy: {n}; nie udało się ponownie połączyć {name}: {reason}
 @msg	`id` is the step reference {r}, which only `run` and `command_batch` resolve	`id` to odwołanie do kroku {r}, które rozwiązują tylko `run` i `command_batch`
 @msg	`ids` must be an array of object ids, not {v}	`ids` musi być tablicą identyfikatorów obiektów, nie {v}
+@msg	`{key}` must be an array of object ids, not {v}	`{key}` musi być tablicą identyfikatorów obiektów, nie {v}
 @msg	`corners` must be an array of anchor indices, not {v}	`corners` musi być tablicą indeksów punktów, nie {v}
 @msg	`{text}`: step {i}'s result has no such value (write $$ for a literal $)	`{text}`: wynik kroku {i} nie ma takiej wartości (wpisz $$, aby uzyskać znak $)
 @msg	`{text}`: there is no step {i} before this one (steps count from 0; write $$ for a literal $)	`{text}`: przed tym krokiem nie ma kroku {i} (kroki liczone od 0; wpisz $$, aby uzyskać znak $)
 @msg	object ids are non-negative integers, not {v}	identyfikatory obiektów to nieujemne liczby całkowite, nie {v}
+@msg	`{key}`: object ids are non-negative integers, not {v}	`{key}`: identyfikatory obiektów to nieujemne liczby całkowite, nie {v}
 @msg	automation filesystem access is not granted: read authority is absent: {path}	nie przyznano dostępu automatyzacji do systemu plików: brak uprawnień do odczytu: {path}
 @msg	automation filesystem access is not granted: write authority is absent: {path}	nie przyznano dostępu automatyzacji do systemu plików: brak uprawnień do zapisu: {path}
 @msg	automation path rejected: outside the read root {root}: {path}	odrzucono ścieżkę automatyzacji: poza katalogiem głównym odczytu {root}: {path}

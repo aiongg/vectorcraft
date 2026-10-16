@@ -4174,10 +4174,12 @@ theme	Appearance	외관
 @msg	Relinked {n} image(s); {name} couldn't be relinked: {reason}	이미지 {n}개를 다시 링크했으며 {name}은(는) 다시 링크할 수 없었습니다: {reason}
 @msg	`id` is the step reference {r}, which only `run` and `command_batch` resolve	`id`는 단계 참조 {r}이며, `run`과 `command_batch`만 이를 해석합니다
 @msg	`ids` must be an array of object ids, not {v}	`ids`는 {v}이(가) 아니라 개체 id 배열이어야 합니다
+@msg	`{key}` must be an array of object ids, not {v}	`{key}`는 {v}이(가) 아니라 개체 id 배열이어야 합니다
 @msg	`corners` must be an array of anchor indices, not {v}	`corners`는 {v}이(가) 아니라 앵커 인덱스 배열이어야 합니다
 @msg	`{text}`: step {i}'s result has no such value (write $$ for a literal $)	`{text}`: 단계 {i}의 결과에 해당 값이 없습니다(문자 그대로의 $는 $$로 쓰세요)
 @msg	`{text}`: there is no step {i} before this one (steps count from 0; write $$ for a literal $)	`{text}`: 이 단계 앞에 단계 {i}이(가) 없습니다(단계는 0부터 셉니다. 문자 그대로의 $는 $$로 쓰세요)
 @msg	object ids are non-negative integers, not {v}	개체 id는 음이 아닌 정수여야 하며 {v}은(는) 안 됩니다
+@msg	`{key}`: object ids are non-negative integers, not {v}	`{key}`: 개체 id는 음이 아닌 정수여야 하며 {v}은(는) 안 됩니다
 @msg	automation filesystem access is not granted: read authority is absent: {path}	자동화 파일 시스템 접근이 허용되지 않았습니다: 읽기 권한이 없습니다: {path}
 @msg	automation filesystem access is not granted: write authority is absent: {path}	자동화 파일 시스템 접근이 허용되지 않았습니다: 쓰기 권한이 없습니다: {path}
 @msg	automation path rejected: outside the read root {root}: {path}	자동화 경로가 거부되었습니다: 읽기 루트 {root} 밖입니다: {path}

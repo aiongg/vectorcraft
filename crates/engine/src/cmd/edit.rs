@@ -158,7 +158,7 @@ fn doc_activate(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn doc_node(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = id_param(p, "id").ok_or_else(|| bad("document.node", "missing id"))?;
+    let id = id_param(p, "id")?.ok_or_else(|| bad("document.node", "missing id"))?;
     let mut opts = slice_opts(p, "document.node")?;
     let summary = bool_or(p, "summary", false);
     if !summary && (opts.depth.is_some() || opts.child_limit.is_some()) {

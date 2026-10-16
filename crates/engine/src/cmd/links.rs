@@ -710,7 +710,7 @@ pub fn with_relative_paths(d: &Document, dest: &str) -> Option<Document> {
 
 fn check(s: &mut Session, p: &Value) -> Result<Value> {
     let st = s.doc()?;
-    let ids = ids_param(p, "ids");
+    let ids = ids_param(p, "ids")?;
     let (mut missing, mut modified) = (0, 0);
     let mut links = vec![];
     for g in groups(&st.doc, ids.as_deref()).iter().filter(|g| !g.ids.is_empty()) {
@@ -731,7 +731,7 @@ fn check(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn update(s: &mut Session, p: &Value) -> Result<Value> {
     let st = s.doc()?;
-    let ids = ids_param(p, "ids");
+    let ids = ids_param(p, "ids")?;
     let (mut reads, mut missing) = (vec![], vec![]);
     for g in groups(&st.doc, ids.as_deref()).into_iter().filter(|g| !g.ids.is_empty()) {
         match probe(&g, folder(st.path.as_deref())) {
@@ -778,7 +778,7 @@ fn relink(s: &mut Session, p: &Value) -> Result<Value> {
             _ => None,
         })
     };
-    let ids: Vec<NodeId> = match ids_param(p, "ids") {
+    let ids: Vec<NodeId> = match ids_param(p, "ids")? {
         Some(ids) => ids,
         None => {
             let selected: Vec<NodeId> = st.selection.objects.iter().copied().filter(|id| image(id).is_some()).collect();
@@ -927,7 +927,7 @@ fn selected_images(st: &crate::DocState, keep: impl Fn(&ImageObject) -> bool) ->
 
 /// `id`, else the first selected image.
 fn image_param(st: &crate::DocState, p: &Value, cmd: &str) -> Result<NodeId> {
-    let id = id_param(p, "id").or_else(|| selected_images(st, |_| true).first().copied()).ok_or_else(|| bad(cmd, "select an image, or pass id"))?;
+    let id = id_param(p, "id")?.or_else(|| selected_images(st, |_| true).first().copied()).ok_or_else(|| bad(cmd, "select an image, or pass id"))?;
     match image_of(&st.doc, id) {
         Some(_) => Ok(id),
         None if st.doc.node(id).is_none() => Err(crate::EngineError::NoNode(id)),
@@ -956,7 +956,7 @@ fn placement_of(d: &Document, id: NodeId) -> Option<PlacementOptions> {
 /// `id`, else the first selected image or placed document.
 fn linked_param(st: &crate::DocState, p: &Value, cmd: &str) -> Result<NodeId> {
     let first = || st.selection.objects.iter().copied().find(|id| placement_of(&st.doc, *id).is_some());
-    let id = id_param(p, "id").or_else(first).ok_or_else(|| bad(cmd, "select an image, or pass id"))?;
+    let id = id_param(p, "id")?.or_else(first).ok_or_else(|| bad(cmd, "select an image, or pass id"))?;
     match placement_of(&st.doc, id) {
         Some(_) => Ok(id),
         None if st.doc.node(id).is_none() => Err(crate::EngineError::NoNode(id)),
@@ -1088,7 +1088,7 @@ fn embed(s: &mut Session, p: &Value) -> Result<Value> {
         Some(NodeKind::PlacedDocument(_)) => true,
         _ => false,
     };
-    let ids = ids_param(p, "ids").unwrap_or_else(|| st.selection.objects.iter().copied().filter(linked).collect());
+    let ids = ids_param(p, "ids")?.unwrap_or_else(|| st.selection.objects.iter().copied().filter(linked).collect());
     if let Some(id) = ids.iter().find(|id| !matches!(kind(id), Some(NodeKind::Image(_) | NodeKind::PlacedDocument(_)))) {
         return Err(bad(C, format!("object {} is not an image or a placed document", id.0)));
     }
@@ -1266,7 +1266,8 @@ fn info(s: &mut Session, p: &Value) -> Result<Value> {
 fn placement_options(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "links.placementOptions";
     let st = s.doc()?;
-    let ids = ids_param(p, "ids").unwrap_or_else(|| st.selection.objects.iter().copied().filter(|id| placement_of(&st.doc, *id).is_some()).collect());
+    let ids =
+        ids_param(p, "ids")?.unwrap_or_else(|| st.selection.objects.iter().copied().filter(|id| placement_of(&st.doc, *id).is_some()).collect());
     if let Some(id) = ids.iter().find(|id| placement_of(&st.doc, **id).is_none()) {
         return Err(bad(C, format!("object {} is not an image or a linked file", id.0)));
     }

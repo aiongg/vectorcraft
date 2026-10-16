@@ -327,11 +327,25 @@ pub(crate) fn bool_or(p: &Value, key: &str, default: bool) -> bool {
 pub(crate) fn str_param<'a>(p: &'a Value, key: &str) -> Option<&'a str> {
     p.get(key).and_then(Value::as_str)
 }
-pub(crate) fn id_param(p: &Value, key: &str) -> Option<NodeId> {
-    p.get(key).and_then(Value::as_u64).map(NodeId)
+/// The object id `p` gives as `key`: `None` when it is absent or null, an error naming `key` when
+/// it is anything but a non-negative integer, so a bad id never falls back to the selection (#785).
+pub(crate) fn id_param(p: &Value, key: &str) -> Result<Option<NodeId>> {
+    match p.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => object_id(key, v).map(Some),
+    }
 }
-pub(crate) fn ids_param(p: &Value, key: &str) -> Option<Vec<NodeId>> {
-    p.get(key).and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_u64).map(NodeId).collect())
+/// The object ids `p` gives as `key`: `None` when absent or null, an error naming `key` when it
+/// isn't an array or an entry isn't a non-negative integer (none is dropped).
+pub(crate) fn ids_param(p: &Value, key: &str) -> Result<Option<Vec<NodeId>>> {
+    match p.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Array(a)) => a.iter().map(|v| object_id(key, v)).collect::<Result<_>>().map(Some),
+        Some(v) => Err(EngineError::Other(format!("`{key}` must be an array of object ids, not {v}"))),
+    }
+}
+fn object_id(key: &str, v: &Value) -> Result<NodeId> {
+    v.as_u64().map(NodeId).ok_or_else(|| EngineError::Other(format!("`{key}`: object ids are non-negative integers, not {v}")))
 }
 /// Validate all explicit targets before a command changes the document or selection.
 pub(crate) fn checked_ids_param(s: &Session, p: &Value, key: &str, command: &str) -> Result<Vec<NodeId>> {

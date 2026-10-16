@@ -738,7 +738,7 @@ enum Item {
 /// The selected objects (or `ids`) as a library graphic (its id and name set by the caller).
 fn graphic_of(s: &Session, p: &Value, cmd: &str) -> Result<LibraryGraphic> {
     let st = s.doc()?;
-    let ids = match ids_param(p, "ids") {
+    let ids = match ids_param(p, "ids")? {
         Some(ids) => ids,
         None => st.selection.in_paint_order(&st.doc),
     };
@@ -775,7 +775,7 @@ fn color_of(s: &Session, p: &Value, stroke: bool, cmd: &str) -> Result<(String, 
         return Ok((color.to_hex(), color));
     }
     let st = s.doc()?;
-    let ids = match ids_param(p, "ids") {
+    let ids = match ids_param(p, "ids")? {
         Some(ids) => ids,
         None => st.selection.objects.clone(),
     };
