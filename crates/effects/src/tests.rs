@@ -510,6 +510,33 @@ fn zigzag_spaces_ridges_evenly_along_a_straight_line() {
     }
 }
 
+#[test]
+fn zigzag_smooth_is_a_sine_even_when_steep() {
+    use vectorcraft_geom::kurbo::ParamCurve;
+    // #2343: ridges three times as high as they are apart still get handles along the line, a
+    // third of the spacing long, so each flank curves from peak to trough without doubling back.
+    let line = PathData::single(SubPath::polyline(&[Point::new(0.0, 0.0), Point::new(0.0, 500.0)], false));
+    let out = run("distort.zigZag", json!({"ridges": 4, "points": "smooth", "size": 300}), &line);
+    let sp = &out.subpaths[0];
+    assert_eq!(sp.anchors.len(), 6);
+    for (k, a) in sp.anchors.iter().enumerate() {
+        let (hin, hout) = (a.h_in - a.p, a.h_out - a.p);
+        if k > 0 {
+            assert!(close(hin.x, 0.0, 1e-6) && close(hin.y, -100.0 / 3.0, 1e-3), "{k}: {a:?}");
+        }
+        if k < 5 {
+            assert!(close(hout.x, 0.0, 1e-6) && close(hout.y, 100.0 / 3.0, 1e-3), "{k}: {a:?}");
+        }
+    }
+    for i in 0..sp.segment_count() {
+        let c = sp.segment(i);
+        let ys: Vec<f64> = (0..=50).map(|s| c.eval(s as f64 / 50.0).y).collect();
+        assert!(ys.windows(2).all(|w| w[1] > w[0]), "flank {i} doubles back: {ys:?}");
+        // Halfway along, the flank crosses the line.
+        assert!(close(c.eval(0.5).x, 0.0, 1e-6), "flank {i}: {:?}", c.eval(0.5));
+    }
+}
+
 /// #1554 on curves: a circle's ridges sit at equal angles, at the radius plus and minus the size in
 /// turn all the way round.
 #[test]
