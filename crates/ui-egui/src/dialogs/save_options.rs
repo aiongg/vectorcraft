@@ -1,6 +1,6 @@
 //! A save format's options before the file is written; on the web, where there is no save panel,
-//! also the Save As dialog that names the file and picks the format (SVG and PDF then go on to
-//! their own dialogs). The rows come from the format's options in the engine's format table, so a
+//! also the Save As dialog that names the file and picks the format (SVG, PDF and EPS then go on
+//! to their own dialogs). The rows come from the format's options in the engine's format table, so a
 //! format gains rows as its encoder gains options.
 //!
 //! Fields: `__action` (the save command it finishes), `__pick` (file name and format
@@ -62,10 +62,10 @@ pub(crate) fn option_values(app: &mut VectorcraftApp, f: &Format) -> Map<String,
         .collect()
 }
 
-/// Formats whose options have a dialog of their own (SVG Options, Save PDF), which follows this
-/// one.
+/// Formats whose options have a dialog of their own (SVG Options, Save PDF, EPS Options), which
+/// follows this one.
 fn own_dialog(f: &Format) -> bool {
-    matches!(f.id, "svg" | "svgz" | "pdf")
+    matches!(f.id, "svg" | "svgz" | "pdf" | "eps")
 }
 
 /// Does `f` save each artboard to a separate file on request (native and `.ai` files)? Its

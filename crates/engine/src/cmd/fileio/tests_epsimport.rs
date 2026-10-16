@@ -40,7 +40,7 @@ fn an_eps_file_of_ours_reopens_as_the_same_document() {
     let r = open(&mut s, "rich.eps", &eps).unwrap();
     assert_eq!((&r["warnings"], &r["restored"], &r["format"]), (&json!([]), &json!(true), &json!("eps")), "{r}");
     assert_eq!(comparable(&s.doc().unwrap().doc), before, "the document came back exactly");
-    assert_eq!(s.doc().unwrap().path, None, "an EPS file is not saved over");
+    assert_eq!(s.doc().unwrap().path, None, "opened from bytes: no file to save over");
     // A document that can't be read: the PostScript is read instead, with a warning.
     let at = eps.windows(9).position(|w| w == b"native\n% ").unwrap() + 12;
     let mut damaged = eps.clone();
@@ -48,6 +48,38 @@ fn an_eps_file_of_ours_reopens_as_the_same_document() {
     let r = open(&mut s, "damaged.eps", &damaged).unwrap();
     assert_eq!((&r["warnings"][0], &r["restored"]), (&json!(load::EDITING_DAMAGED), &json!(false)), "{r}");
     assert!(objects(&s) > 0);
+}
+
+/// #1933: Save As EPS makes the file the document's own; it reopens as the same document and
+/// Save writes EPS again. An EPS file without the document opens without a path to save over.
+#[test]
+fn save_as_eps_reopens_as_the_same_document_and_saves_back() {
+    let mut s = rich();
+    let dir = std::env::temp_dir().join(format!("vc-save-eps-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("art.eps").to_string_lossy().to_string();
+    let r = s.execute("file.saveAs", &json!({"path": path, "options": {"level": 2, "artboard": 0, "selectedOnly": true}})).unwrap();
+    assert_eq!(r["format"], "eps", "{r}");
+    let st = s.doc().unwrap();
+    assert_eq!((st.format, st.path.as_deref(), st.is_dirty()), ("eps", Some(path.as_str()), false));
+    assert_eq!(Value::Object(st.save_options.clone()), json!({"level": 2}), "a save writes the whole document");
+    // As saved (Save stamps the File Info dates).
+    let before = comparable(&st.doc);
+    let r = s.execute("document.open", &json!({"path": path})).unwrap();
+    assert_eq!((&r["format"], &r["restored"]), (&json!("eps"), &json!(true)), "{r}");
+    assert_eq!(comparable(&s.doc().unwrap().doc), before, "the document came back exactly");
+    assert_eq!(s.doc().unwrap().path.as_deref(), Some(path.as_str()));
+    s.execute("shape.rectangle", &json!({"x": 1, "y": 1, "width": 5, "height": 5})).unwrap();
+    assert_eq!(s.execute("document.save", &json!({})).unwrap()["format"], "eps");
+    let again = vectorcraft_eps::native(&std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(vectorcraft_format::load(&again).unwrap().layers, s.doc().unwrap().doc.layers);
+    // Another app's EPS file opens as artwork, without a path to save over.
+    let other = dir.join("other.eps").to_string_lossy().to_string();
+    std::fs::write(&other, foreign(&std::fs::read(&path).unwrap())).unwrap();
+    let r = s.execute("document.open", &json!({"path": other})).unwrap();
+    assert_eq!(r["restored"], false, "{r}");
+    assert_eq!(s.doc().unwrap().path, None);
+    let _ = std::fs::remove_dir_all(dir);
 }
 
 #[test]

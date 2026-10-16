@@ -477,10 +477,11 @@ fn has_options(p: &Value) -> bool {
 }
 
 /// Ask for format `f`'s options before a save (`mode`) to `path`: SVG Options for SVG, the Save
-/// PDF dialog for PDF, else the save options dialog. OK finishes the save.
+/// PDF dialog for PDF, EPS Options for EPS, else the save options dialog. OK finishes the save.
 pub fn ask_format_options(app: &mut VectorcraftApp, mode: SaveMode, f: &Format, path: &str) -> Result<Value, String> {
     match f.id {
         "pdf" => ask_pdf_options(app, mode, path),
+        "eps" => ask_eps_options(app, mode, path),
         "svg" | "svgz" => {
             let m = if mode == SaveMode::Copy { svg_options::Mode::SaveCopy } else { svg_options::Mode::Save };
             svg_options::open(app, m, Some(path));
@@ -499,6 +500,24 @@ pub fn ask_pdf_options(app: &mut VectorcraftApp, mode: SaveMode, path: &str) -> 
     let d = app.ui.dialog.as_mut().ok_or("the Save PDF dialog didn't open")?;
     d.fields.insert("__save".into(), json!(mode.command()));
     Ok(json!({ "pending": d.kind }))
+}
+
+/// A save as EPS asks with EPS Options, filled with the EPS options the document was last saved
+/// with (else those used last); its OK finishes the save ([`save_eps`]).
+fn ask_eps_options(app: &mut VectorcraftApp, mode: SaveMode, path: &str) -> Result<Value, String> {
+    let mut p = Value::Object(plan(app, mode, &json!({ "path": path, "format": "eps" }))?.options);
+    p["path"] = json!(path);
+    p["__save"] = json!(mode.command());
+    dialogs::eps_options::open(app, &p);
+    let d = app.ui.dialog.as_ref().ok_or("EPS Options didn't open")?;
+    Ok(json!({ "pending": d.kind }))
+}
+
+/// EPS Options' OK during a save (`mode`): `params` are its `document.exportEps` options and
+/// `path`.
+pub fn save_eps(app: &mut VectorcraftApp, mode: SaveMode, mut params: Value) -> Result<Value, String> {
+    let path = params.as_object_mut().and_then(|o| o.remove("path"));
+    save(app, mode, &json!({ "path": path, "format": "eps", "options": params }), false)
 }
 
 /// The Save PDF dialog's OK during a save (`mode`): `params` are its `document.exportPdf` options
