@@ -3950,6 +3950,7 @@ theme	Appearance	Εμφάνιση
 @msg	the PDF is password-protected: give its password	το PDF προστατεύεται με κωδικό: πληκτρολογήστε τον κωδικό του
 @msg	the PDF password is wrong	ο κωδικός PDF είναι λανθασμένος
 @msg	the Save PDF dialog didn't open	δεν άνοιξε το παράθυρο Αποθήκευση PDF
+@msg	the EPS Options dialog didn't open	δεν άνοιξε το παράθυρο Επιλογές EPS
 @msg	the WMF header is damaged	η κεφαλίδα WMF είναι κατεστραμμένη
 @msg	the art could not be sampled	δεν ήταν δυνατή η δειγματοληψία του σχεδίου
 @msg	the art has no bounds	το σχέδιο δεν έχει όρια

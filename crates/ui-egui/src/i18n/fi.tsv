@@ -4208,6 +4208,7 @@ imageTrace	Outline	Ääriviiva
 @msg	the PDF is password-protected: give its password	tämä PDF-tiedosto on suojattu salasanalla: anna sen salasana
 @msg	the PDF password is wrong	annettu PDF-salasana on väärä
 @msg	the Save PDF dialog didn't open	valintaikkuna Tallenna PDF ei avautunut
+@msg	the EPS Options dialog didn't open	valintaikkuna EPS-asetukset ei avautunut
 @msg	the WMF header is damaged	tiedoston WMF-otsake on vaurioitunut
 @msg	the art could not be sampled	kuvitusta ei voitu näytteistää
 @msg	the art has no bounds	kuvituksella ei ole rajoja

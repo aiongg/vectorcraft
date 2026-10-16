@@ -3913,6 +3913,7 @@ axis	Both	И двете
 @msg	the PDF is password-protected: give its password	PDF файлът е защитен с парола: въведете паролата му
 @msg	the PDF password is wrong	паролата за PDF файла е грешна
 @msg	the Save PDF dialog didn't open	диалоговият прозорец за запазване на PDF не се отвори
+@msg	the EPS Options dialog didn't open	диалоговият прозорец „Опции за EPS“ не се отвори
 @msg	the WMF header is damaged	WMF заглавната част е повредена
 @msg	the art could not be sampled	графиката не можа да бъде проучена
 @msg	the art has no bounds	графиката няма граници

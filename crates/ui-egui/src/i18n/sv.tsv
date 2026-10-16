@@ -3912,6 +3912,7 @@ axis	Both	Båda
 @msg	the PDF is password-protected: give its password	PDF-filen är lösenordsskyddad: ange lösenordet
 @msg	the PDF password is wrong	PDF-lösenordet är fel
 @msg	the Save PDF dialog didn't open	dialogrutan Spara PDF öppnades inte
+@msg	the EPS Options dialog didn't open	dialogrutan EPS-alternativ öppnades inte
 @msg	the WMF header is damaged	WMF-huvudet är skadat
 @msg	the art could not be sampled	grafiken kunde inte samplas
 @msg	the art has no bounds	grafiken har ingen avgränsning
