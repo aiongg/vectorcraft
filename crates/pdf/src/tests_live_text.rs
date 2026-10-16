@@ -3,7 +3,8 @@
 use craft_pdf::write::backend as krilla;
 use krilla::geom::{Point as KPoint, Transform};
 use krilla::page::PageSettings;
-use krilla::text::{Font, TextDirection};
+use krilla::surface::Surface;
+use krilla::text::{Font, GlyphId, KrillaGlyph};
 use kurbo::Shape;
 use vectorcraft_doc::{Document, NodeKind, TextObject};
 
@@ -23,7 +24,7 @@ pub(crate) fn text_pdf(lines: &[(f32, f32, f32, &str)], rotated: bool) -> Vec<u8
         s.push_transform(&Transform::from_row(0.0, 1.0, -1.0, 0.0, 150.0, 20.0));
     }
     for &(x, y, size, text) in lines {
-        s.draw_text(KPoint::from_xy(x, y), font.clone(), size, text, false, TextDirection::Auto);
+        draw_text(&mut s, KPoint::from_xy(x, y), font.clone(), "Source Sans 3", size, text);
     }
     if rotated {
         s.pop();
@@ -31,6 +32,24 @@ pub(crate) fn text_pdf(lines: &[(f32, f32, f32, &str)], rotated: bool) -> Vec<u8
     s.finish();
     page.finish();
     pdf.finish().unwrap()
+}
+
+/// Draw `text` at `at` in `font`, shaped (kerning, ligatures) as VectorCraft shapes the installed
+/// `family` whose glyphs `font` has, as other writers draw live text.
+fn draw_text(s: &mut Surface, at: KPoint, font: Font, family: &str, size: f32, text: &str) {
+    let db = vectorcraft_text::FontDb::global();
+    let face = db.face(family, "Regular").unwrap();
+    let style = vectorcraft_doc::CharStyle { font_family: family.into(), size: f64::from(size), ..Default::default() };
+    let layout = vectorcraft_text::layout(db, &TextObject::point(vectorcraft_geom::Point::ZERO, text, style));
+    let glyphs: Vec<KrillaGlyph> = layout
+        .glyphs
+        .iter()
+        .map(|g| {
+            assert_eq!(g.font_id, face.id(), "{text}: every glyph from {family}");
+            KrillaGlyph::new(GlyphId::new(g.gid), (g.advance / f64::from(size)) as f32, 0.0, 0.0, 0.0, g.byte..g.byte + g.len, None)
+        })
+        .collect();
+    s.draw_glyphs(at, &glyphs, font, text, size, false);
 }
 
 fn texts(d: &Document) -> Vec<TextObject> {
@@ -188,12 +207,12 @@ fn uninstalled_serif() -> Vec<u8> {
     renamed(SOURCE_SERIF, &[("SourceSerif4", "SourceSerif9"), ("Source Serif 4", "Source Serif 9")])
 }
 
-/// A page with `text` in `font` (24 pt, at 20, 50).
-fn one_line_pdf(font: Vec<u8>, text: &str) -> Vec<u8> {
+/// A page with `text` in `font` (24 pt, at 20, 50), which has the glyphs of the installed `family`.
+fn one_line_pdf(font: Vec<u8>, family: &str, text: &str) -> Vec<u8> {
     let mut pdf = krilla::Document::new();
     let mut page = pdf.start_page_with(PageSettings::from_wh(300.0, 200.0).unwrap());
     let mut s = page.surface();
-    s.draw_text(KPoint::from_xy(20.0, 50.0), Font::new(font.into(), 0).unwrap(), 24.0, text, false, TextDirection::Auto);
+    draw_text(&mut s, KPoint::from_xy(20.0, 50.0), Font::new(font.into(), 0).unwrap(), family, 24.0, text);
     s.finish();
     page.finish();
     pdf.finish().unwrap()
@@ -217,9 +236,9 @@ fn outlined_text_in_a_missing_font_keeps_the_embedded_glyphs() {
         assert!(texts(&r.document).is_empty());
         outlines(&r.document)
     };
-    let missing = outlined(&one_line_pdf(uninstalled_serif(), "Serif Hamburg"));
-    let installed = outlined(&one_line_pdf(SOURCE_SERIF.to_vec(), "Serif Hamburg"));
-    let fallback = outlined(&one_line_pdf(SOURCE_SANS.to_vec(), "Serif Hamburg"));
+    let missing = outlined(&one_line_pdf(uninstalled_serif(), "Source Serif 4", "Serif Hamburg"));
+    let installed = outlined(&one_line_pdf(SOURCE_SERIF.to_vec(), "Source Serif 4", "Serif Hamburg"));
+    let fallback = outlined(&one_line_pdf(SOURCE_SANS.to_vec(), "Source Sans 3", "Serif Hamburg"));
     let (m, i, f) = (missing.bounding_box(), installed.bounding_box(), fallback.bounding_box());
     assert!(m.width() > 50.0, "{m:?}");
     let near = |a: kurbo::Rect, b: kurbo::Rect| (a.x0 - b.x0).abs() + (a.x1 - b.x1).abs() + (a.y0 - b.y0).abs() + (a.y1 - b.y1).abs() < 0.01;
@@ -238,7 +257,7 @@ fn text_in_a_missing_font_stays_live_type() {
             s.set_fill(None);
             s.set_stroke(Some(krilla::paint::Stroke::default()));
         }
-        s.draw_text(KPoint::from_xy(20.0, 50.0), font, 24.0, "Gagaku", false, TextDirection::Auto);
+        draw_text(&mut s, KPoint::from_xy(20.0, 50.0), font, "Source Sans 3", 24.0, "Gagaku");
         s.finish();
         page.finish();
         let r = import_with_report(&pdf.finish().unwrap(), &ImportOptions::default()).unwrap();
@@ -315,13 +334,13 @@ fn a_tagged_span_inside_a_line_leaves_the_line_whole() {
     let font = Font::new(SOURCE_SANS.into(), 0).unwrap();
     // "Ga" "ga" "ku" with the middle part in its own marked content (a span, as apps write for
     // actual text), all on one baseline.
-    s.draw_text(KPoint::from_xy(20.0, 50.0), font.clone(), 24.0, "Ga", false, TextDirection::Auto);
+    draw_text(&mut s, KPoint::from_xy(20.0, 50.0), font.clone(), "Source Sans 3", 24.0, "Ga");
     let x = 20.0 + ink_width_of(&font, 24.0, "Ga");
     s.start_tagged(ContentTag::Span(SpanTag::empty()));
-    s.draw_text(KPoint::from_xy(x, 50.0), font.clone(), 24.0, "ga", false, TextDirection::Auto);
+    draw_text(&mut s, KPoint::from_xy(x, 50.0), font.clone(), "Source Sans 3", 24.0, "ga");
     s.end_tagged();
     let x = x + ink_width_of(&font, 24.0, "ga");
-    s.draw_text(KPoint::from_xy(x, 50.0), font, 24.0, "ku", false, TextDirection::Auto);
+    draw_text(&mut s, KPoint::from_xy(x, 50.0), font, "Source Sans 3", 24.0, "ku");
     s.finish();
     page.finish();
     let d = import(&pdf.finish().unwrap()).unwrap();

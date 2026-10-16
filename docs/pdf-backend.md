@@ -5,7 +5,8 @@ PDF writing uses `craft-pdf` from `storytold/craft-libs`, pinned to
 metadata construction, fallible font preparation and serialization, and native unwind guards.
 The dependency disables default features and enables `write` and `interpret`.
 The production writer retains Krilla’s raster-image support without its optional text shaper.
-PDF test fixtures enable `simple-text` through a dev dependency.
+PDF test fixtures place shaped glyphs from `vectorcraft-text` layout, so `rustybuzz` and
+`ttf-parser` are not in `Cargo.lock`.
 The PDF crate explicitly retains the `flate2` `zlib-rs` feature previously supplied
 by the registry reader, preserving compressed export bytes and their derived document IDs.
 
