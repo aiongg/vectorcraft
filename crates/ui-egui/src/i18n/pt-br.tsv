@@ -868,6 +868,32 @@
 	Export	Exportar
 	Export All…	Exportar Tudo…
 	Export Artboard	Exportar Mesa de Trabalho
+	A File per Object	Um arquivo por objeto
+	Example: {name}	Exemplo: {name}
+	Export Preset:	Predefinição de exportação:
+	Folders:	Pastas:
+	Insert	Inserir
+	Nothing is selected. Select the art to export, then open this tab again.	Nada selecionado. Selecione a arte a exportar e abra esta guia novamente.
+	One File of the Selection	Um arquivo da seleção
+	Start at:	Começar em:
+	{n} objects selected	{n} objetos selecionados
+	Delete Export Preset	Excluir predefinição de exportação
+	Export Presets	Predefinições de exportação
+	Save Export Preset	Salvar predefinição de exportação
+	Export Layer	Exportar camada
+	Export Selection	Exportar seleção
+	All in One Folder	Tudo em uma pasta
+	By Size or Row	Por tamanho ou linha
+	By Format	Por formato
+	By Artboard or Item	Por prancheta ou item
+	By Item, Then Format	Por item, depois formato
+	Document Name	Nome do documento
+	Artboard or Item Name	Nome da prancheta ou do item
+	Number (####)	Número (####)
+	Date (YYYYMMDD)	Data (AAAAMMDD)
+	Date (YYYY-MM-DD)	Data (AAAA-MM-DD)
+	Time (hhmmss)	Hora (hhmmss)
+	PDF Print	PDF para impressão
 	Export As	Exportar Como
 	Export As PNG…	Exportar Como PNG…
 	Export As SVG…	Exportar Como SVG…
@@ -933,6 +959,7 @@
 	Fill and Stroke	Preenchimento e Traçado
 	Fill new strokes	Preencher novos traçados
 	Keep selected	Manter selecionado
+	Merge only with selection	Mesclar somente com a seleção
 	Fill with Placeholder Text	Preencher com Texto de Placeholder
 	Insert Inline Symbol	Inserir Símbolo no Texto
 	Fill:	Preenchimento:
@@ -950,8 +977,11 @@
 	Fit Artboard in Window	Ajustar Mesa de Trabalho na Janela
 	Fit Headline	Ajustar Manchete
 	Decrease Font Size	Diminuir Tamanho da Fonte
+	Decrease Font Size by Five Steps	Diminuir Tamanho da Fonte em Cinco Incrementos
 	Increase Font Size	Aumentar Tamanho da Fonte
+	Increase Font Size by Five Steps	Aumentar Tamanho da Fonte em Cinco Incrementos
 	Reset Tracking and Kerning	Redefinir Rastreamento e Kerning
+	Reset Horizontal Scale	Redefinir Escala Horizontal
 	Step Type	Ajustar Texto em Incrementos
 	Fit dashes to corners and ends	Ajustar tracejados aos cantos e extremidades
 	Fit in Window	Ajustar na Janela
@@ -1045,6 +1075,9 @@
 	Graphic Style Options…	Opções de Estilo Gráfico…
 	Symbol Options	Opções de Símbolo
 	Symbol Options…	Opções de Símbolo…
+	Export Type:	Tipo de exportação:
+	Movie Clip	Clipe de filme
+	Graphic	Gráfico
 	Graphic Styles	Estilos Gráficos
 	Graphic Styles Options	Opções de Estilos Gráficos
 	Graphics Processor	Processador Gráfico
@@ -3305,6 +3338,8 @@ axis	Both	Ambos
 @msg	cannot split an open path at its end point	não é possível dividir um traçado aberto em sua extremidade
 @msg	closing needs three anchors	fechar exige três âncoras
 @msg	check an asset to export	marque um recurso para exportar
+@msg	check a layer to export	marque uma camada para exportar
+@msg	select the art to export first	selecione primeiro a arte a exportar
 @msg	choice must be "merge" or "add", not `{choice}`	choice deve ser "merge" ou "add", não `{choice}`
 @msg	choose a direction to divide in	escolha uma direção para dividir
 @msg	choose a folder to export to	escolha uma pasta para exportar
@@ -4222,7 +4257,6 @@ axis	Both	Ambos
 	Delete Group	Excluir Grupo
 	Import Library…	Importar Biblioteca…
 	Export Library…	Exportar Biblioteca…
-	Graphic	Gráfico
 	System Layout	Layout do Sistema
 	Tabular Lining	Alinhado Tabular
 	Tabular Oldstyle	Antigo Tabular
@@ -4870,3 +4904,15 @@ mark-style	Japanese	Japonesas
 	Amber	Âmbar
 	Coral	Coral
 	Violet	Violeta
+	Sketch	Esboço
+	Halftone Pattern…	Padrão de meio-tom…
+	Halftone Pattern	Padrão de meio-tom
+	Pattern Type	Tipo de padrão
+	Dot	Ponto
+# User Interface › Color Scheme
+	Color Scheme	Esquema de cores
+	Modern	Moderno
+
+# Symbol Options › Export Type
+@msg	name is empty	o nome está vazio
+@msg	no symbol named `{n}`	nenhum símbolo chamado `{n}`

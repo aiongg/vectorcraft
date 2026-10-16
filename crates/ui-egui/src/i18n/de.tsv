@@ -959,6 +959,32 @@
 	Export All…	Alle exportieren…
 	Export and Clipboard Transparency Flattener Settings	Einstellungen für die Transparenzreduzierung bei Export und Zwischenablage
 	Export Artboard	Zeichenfläche exportieren
+	A File per Object	Eine Datei pro Objekt
+	Example: {name}	Beispiel: {name}
+	Export Preset:	Exportvorgabe:
+	Folders:	Ordner:
+	Insert	Einfügen
+	Nothing is selected. Select the art to export, then open this tab again.	Nichts ausgewählt. Wählen Sie das zu exportierende Bildmaterial aus und öffnen Sie diese Registerkarte erneut.
+	One File of the Selection	Eine Datei der Auswahl
+	Start at:	Beginnen bei:
+	{n} objects selected	{n} Objekte ausgewählt
+	Delete Export Preset	Exportvorgabe löschen
+	Export Presets	Exportvorgaben
+	Save Export Preset	Exportvorgabe speichern
+	Export Layer	Ebene exportieren
+	Export Selection	Auswahl exportieren
+	All in One Folder	Alles in einem Ordner
+	By Size or Row	Nach Größe oder Zeile
+	By Format	Nach Format
+	By Artboard or Item	Nach Zeichenfläche oder Element
+	By Item, Then Format	Nach Element, dann Format
+	Document Name	Dokumentname
+	Artboard or Item Name	Name der Zeichenfläche oder des Elements
+	Number (####)	Nummer (####)
+	Date (YYYYMMDD)	Datum (JJJJMMTT)
+	Date (YYYY-MM-DD)	Datum (JJJJ-MM-TT)
+	Time (hhmmss)	Uhrzeit (hhmmss)
+	PDF Print	PDF Druck
 	Export As	Exportieren als
 	Export As PNG…	Als PNG exportieren…
 	Export As SVG…	Als SVG exportieren…
@@ -1031,6 +1057,7 @@
 	Fill and Stroke	Fläche und Kontur
 	Fill new strokes	Neue Striche füllen
 	Keep selected	Ausgewählt lassen
+	Merge only with selection	Nur mit Auswahl zusammenfügen
 	Fill Color	Flächenfarbe
 	Fill New Type Objects With Placeholder Text	Neue Textobjekte mit Platzhaltertext füllen
 	Fill Rule	Füllregel
@@ -1053,8 +1080,11 @@
 	Fit dashes to corners and ends	Striche an Ecken und Enden anpassen
 	Fit Headline	Überschrift einpassen
 	Decrease Font Size	Schriftgrad verringern
+	Decrease Font Size by Five Steps	Schriftgrad um fünf Schritte verringern
 	Increase Font Size	Schriftgrad erhöhen
+	Increase Font Size by Five Steps	Schriftgrad um fünf Schritte erhöhen
 	Reset Tracking and Kerning	Laufweite und Kerning zurücksetzen
+	Reset Horizontal Scale	Horizontale Skalierung zurücksetzen
 	Spacing	Abstand
 	Step Type	Text schrittweise ändern
 	Fit in View	In Ansicht einpassen
@@ -3618,6 +3648,8 @@ theme	Appearance	Erscheinungsbild
 @msg	cannot split an open path at its end point	ein offener Pfad kann nicht an seinem Endpunkt geteilt werden
 @msg	closing needs three anchors	zum Schließen sind drei Ankerpunkte nötig
 @msg	check an asset to export	markieren Sie ein Asset für den Export
+@msg	check a layer to export	wählen Sie eine Ebene für den Export
+@msg	select the art to export first	wählen Sie zuerst das zu exportierende Bildmaterial aus
 @msg	choice must be "merge" or "add", not `{choice}`	choice muss "merge" oder "add" sein, nicht `{choice}`
 @msg	choose a direction to divide in	wählen Sie eine Richtung für die Unterteilung
 @msg	choose a folder to export to	wählen Sie einen Ordner für den Export
@@ -4490,3 +4522,17 @@ theme	Appearance	Erscheinungsbild
 	Coral	Koralle
 	Violet	Violett
 	Pink	Pink
+	Sketch	Zeichenfilter
+	Halftone Pattern…	Rasterungseffekt…
+	Halftone Pattern	Rasterungseffekt
+	Pattern Type	Musterart
+	Dot	Punkt
+# User Interface › Color Scheme
+	Color Scheme	Farbschema
+	Modern	Modern
+
+# Symbol Options › Export Type
+	Export Type:	Exporttyp:
+	Movie Clip	Movieclip
+@msg	name is empty	Name ist leer
+@msg	no symbol named `{n}`	kein Symbol namens `{n}`

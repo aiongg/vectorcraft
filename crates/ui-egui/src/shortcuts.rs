@@ -422,6 +422,27 @@ pub fn handle(app: &mut VectorcraftApp, ctx: &egui::Context) {
         for d in digits {
             let _ = app.session.tool_key(ToolKey::Digit(d), Mods::default(), view);
         }
+        // The tool gets each letter it takes (E while dragging a selection marquee) once per press,
+        // without Cmd, Ctrl or Alt. The key is the one egui reports, which on a layout without Latin
+        // letters is the key at that position on a US layout.
+        let letters: Vec<char> = ctx.input(|i| {
+            i.events
+                .iter()
+                .filter_map(|e| match e {
+                    egui::Event::Key { key, pressed: true, repeat: false, modifiers, .. }
+                        if !(modifiers.command || modifiers.alt || modifiers.ctrl) =>
+                    {
+                        letter_of(*key)
+                    }
+                    _ => None,
+                })
+                .collect()
+        });
+        for c in letters {
+            if app.session.tool_claims_key(ToolKey::Letter(c), view) {
+                let _ = app.session.tool_key(ToolKey::Letter(c), Mods::default(), view);
+            }
+        }
         return;
     }
     // Keys the active tool claims ahead of their shortcuts (the Gradient tool's selected stop:
@@ -647,6 +668,15 @@ fn digit_of(k: Key) -> Option<u8> {
     DIGITS.iter().position(|d| *d == k).map(|i| i as u8)
 }
 
+/// The lowercase letter a letter key A–Z stands for.
+fn letter_of(k: Key) -> Option<char> {
+    let mut name = k.name().chars();
+    match (name.next(), name.next()) {
+        (Some(c), None) if c.is_ascii_alphabetic() => Some(c.to_ascii_lowercase()),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -809,6 +839,34 @@ mod tests {
         assert!(app.session.tool_wants_text());
         frame(&mut app, vec![chord]);
         assert_eq!(spacing(&mut app), [(json!("One "), json!(200.0), json!(-40.0)), (json!("Two"), json!(0.0), json!(null))]);
+    }
+
+    /// Cmd+Shift+X resets the horizontal scale of the selected type to 100%, and of the Type
+    /// tool's selected text while it edits. egui reports the chord as a Cut with Shift held, and
+    /// the type object is not cut.
+    #[test]
+    fn cmd_shift_x_resets_horizontal_scale() {
+        let mut app = VectorcraftApp::new(vectorcraft_engine::Session::new(), Default::default());
+        app.session.execute("file.new", &json!({"width": 200, "height": 200})).unwrap();
+        let id = app.session.execute("text.create", &json!({"x": 20, "y": 50, "text": "One Two"})).unwrap()["id"].as_u64().unwrap();
+        let stretched = |app: &mut VectorcraftApp| app.session.execute("text.setRangeStyle", &json!({"id": id, "hScale": 150})).unwrap();
+        let scales = |app: &mut VectorcraftApp| {
+            let r = app.session.execute("text.getRange", &json!({"id": id})).unwrap();
+            r["runs"].as_array().unwrap().iter().map(|run| (run["text"].clone(), run["style"]["h_scale"].clone())).collect::<Vec<_>>()
+        };
+        let chord = vec![egui::Event::ModifiersChanged(Modifiers::COMMAND | Modifiers::SHIFT), egui::Event::Cut];
+        stretched(&mut app);
+        app.session.execute("select.set", &json!({"ids": [id]})).unwrap();
+        frame(&mut app, chord.clone());
+        assert_eq!(scales(&mut app), [(json!("One Two"), json!(100.0))]);
+        // While the Type tool edits: only its selection, and the text stays.
+        stretched(&mut app);
+        app.select_tool("type");
+        app.session.apply_actions(vec![vectorcraft_tools::Action::Notify("text.editNew".into())]).unwrap();
+        app.session.set_tool_option("select", &json!({"start": 4, "end": 7}));
+        assert!(app.session.tool_wants_text());
+        frame(&mut app, chord);
+        assert_eq!(scales(&mut app), [(json!("One "), json!(150.0)), (json!("Two"), json!(100.0))]);
     }
 
     /// Tab shows and hides the panels, and in the Type tool it types a tab, without moving the
@@ -1163,6 +1221,36 @@ mod tests {
         assert_eq!(app.session.tool_id(), "curvature");
     }
 
+    /// Cmd/Ctrl+Alt+Shift+. and , step the font size by five Size/Leading increments, and
+    /// Cmd/Ctrl+Shift+. still steps it by one: the chord with Alt does not reach the one-step
+    /// command.
+    #[test]
+    fn cmd_alt_shift_period_and_comma_step_the_font_size_by_five() {
+        let mut app = VectorcraftApp::new(vectorcraft_engine::Session::new(), Default::default());
+        app.session.execute("file.new", &json!({"width": 200, "height": 200})).unwrap();
+        let id = app.session.execute("text.create", &json!({"x": 20, "y": 50, "text": "One Two", "size": 12})).unwrap()["id"].as_u64().unwrap();
+        let sizes = |app: &mut VectorcraftApp| {
+            let r = app.session.execute("text.getRange", &json!({"id": id})).unwrap();
+            r["runs"].as_array().unwrap().iter().map(|run| (run["text"].clone(), run["style"]["size"].clone())).collect::<Vec<_>>()
+        };
+        let press = |key, modifiers| egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
+        let five = Modifiers::COMMAND | Modifiers::ALT | Modifiers::SHIFT;
+        app.session.execute("select.set", &json!({"ids": [id]})).unwrap();
+        frame(&mut app, vec![press(Key::Period, five)]);
+        assert_eq!(sizes(&mut app), [(json!("One Two"), json!(22.0))]);
+        frame(&mut app, vec![press(Key::Period, Modifiers::COMMAND | Modifiers::SHIFT)]);
+        assert_eq!(sizes(&mut app), [(json!("One Two"), json!(24.0))], "one step");
+        frame(&mut app, vec![press(Key::Comma, five)]);
+        assert_eq!(sizes(&mut app), [(json!("One Two"), json!(14.0))]);
+        // While the Type tool edits: only its selection.
+        app.select_tool("type");
+        app.session.apply_actions(vec![vectorcraft_tools::Action::Notify("text.editNew".into())]).unwrap();
+        app.session.set_tool_option("select", &json!({"start": 4, "end": 7}));
+        assert!(app.session.tool_wants_text());
+        frame(&mut app, vec![press(Key::Period, five)]);
+        assert_eq!(sizes(&mut app), [(json!("One "), json!(14.0)), (json!("Two"), json!(24.0))]);
+    }
+
     /// #793: with a layout without Latin letters the one-key shortcuts go by the key's position:
     /// the P key typing Persian `ح` chooses the Pen, the V key typing Russian `м` the Selection
     /// tool. A Latin layout keeps the letter typed: AZERTY's A (the Q key's place) is A.
@@ -1242,6 +1330,42 @@ mod tests {
         assert_eq!((preview.0.as_str(), &preview.1["perpendicular"]), ("perspective.move", &json!(true)));
         assert_eq!(digit_of(Key::Num0), Some(0));
         assert_eq!(digit_of(Key::A), None);
+    }
+
+    /// E pressed while the Selection tool drags a marquee makes it select only the objects inside
+    /// it: once per press, without Cmd, and from the key at E's position on a layout without Latin
+    /// letters.
+    #[test]
+    fn e_reaches_a_dragged_marquee_once_per_press() {
+        use vectorcraft_tools::{PointerEvent, PointerKind};
+        let mut app = VectorcraftApp::new(vectorcraft_engine::Session::new(), Default::default());
+        app.session.execute("file.new", &json!({"width": 800, "height": 600})).unwrap();
+        let inside = app.session.execute("shape.rectangle", &json!({"x": 100, "y": 100, "width": 100, "height": 100})).unwrap()["id"].clone();
+        let touched = app.session.execute("shape.rectangle", &json!({"x": 300, "y": 100, "width": 100, "height": 100})).unwrap()["id"].clone();
+        app.select_tool("selection");
+        let e = |key, repeat, modifiers| egui::Event::Key { key, physical_key: Some(Key::E), pressed: true, repeat, modifiers };
+        let mut marquee = |events: Vec<egui::Event>| {
+            let v = app.view_info();
+            app.session.pointer(&PointerEvent::new(PointerKind::Down, 50.0, 50.0), v).unwrap();
+            app.session.pointer(&PointerEvent::new(PointerKind::Drag, 350.0, 250.0), v).unwrap();
+            frame(&mut app, events);
+            app.session.pointer(&PointerEvent::new(PointerKind::Up, 350.0, 250.0), v).unwrap();
+            let ids = app.session.doc().unwrap().selection.objects.iter().map(|i| json!(i.0)).collect::<Vec<_>>();
+            assert_eq!(app.session.tool_id(), "selection");
+            ids
+        };
+        assert_eq!(marquee(vec![]), vec![inside.clone(), touched.clone()]);
+        // A held key repeats: only its first press switches.
+        assert_eq!(marquee(vec![e(Key::E, false, Modifiers::NONE), e(Key::E, true, Modifiers::NONE)]), vec![inside.clone()]);
+        let up = egui::Event::Key { key: Key::E, physical_key: Some(Key::E), pressed: false, repeat: false, modifiers: Modifiers::NONE };
+        let twice = vec![e(Key::E, false, Modifiers::NONE), up, e(Key::E, false, Modifiers::NONE)];
+        assert_eq!(marquee(twice), vec![inside.clone(), touched.clone()], "pressed twice: what it touches");
+        // A Russian layout: egui-winit reports the key at E's position, and the text it types.
+        assert_eq!(marquee(vec![e(Key::E, false, Modifiers::NONE), egui::Event::Text("у".into())]), vec![inside.clone()]);
+        assert_eq!(marquee(vec![e(Key::E, false, Modifiers::COMMAND)]), vec![inside, touched], "Cmd+E is not E");
+        assert_eq!(letter_of(Key::E), Some('e'));
+        assert_eq!(letter_of(Key::Num1), None);
+        assert_eq!(letter_of(Key::Escape), None);
     }
 
     /// Cmd+, opens Settings on a Mac only, and never takes a chord a command already has.

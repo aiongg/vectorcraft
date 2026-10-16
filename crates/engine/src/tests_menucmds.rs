@@ -705,6 +705,37 @@ fn convert_to_artboards_and_rearrange() {
     assert_eq!(bounds(&s, b), Rect::new(50.0, 675.0, 60.0, 685.0));
 }
 
+/// Fit to Artwork Bounds fits each artboard it is given to the art on it, in one undo step: an
+/// object partly on an artboard counts for each artboard it overlaps, art flush with an edge from
+/// outside or on no artboard doesn't count, and an artboard with no art stays as it is.
+#[test]
+fn fit_to_artwork_bounds_fits_each_artboard_to_its_own_art() {
+    let mut s = session();
+    s.execute("artboard.new", &json!({"x": 1000, "y": 0, "width": 400, "height": 300})).unwrap();
+    s.execute("artboard.new", &json!({"x": 0, "y": 1000, "width": 300, "height": 300})).unwrap();
+    rect(&mut s, 100.0, 100.0, 50.0, 50.0);
+    rect(&mut s, 1100.0, 50.0, 100.0, 100.0);
+    // Across the gap between artboards 1 and 2.
+    rect(&mut s, 700.0, 250.0, 350.0, 30.0);
+    // Flush with artboard 1's right edge, and on no artboard.
+    rect(&mut s, 800.0, 500.0, 100.0, 50.0);
+    rect(&mut s, 3000.0, 3000.0, 10.0, 10.0);
+    s.execute("select.all", &json!({})).unwrap();
+    s.execute("paint.setStroke", &json!({"none": true})).unwrap();
+    let boards = |s: &Session| s.doc().unwrap().doc.artboards.iter().map(|a| a.rect).collect::<Vec<_>>();
+    let was = boards(&s);
+    let n = undo_len(&s);
+    s.execute("artboard.fitToArt", &json!({"indices": [0, 1, 2]})).unwrap();
+    assert_eq!(boards(&s), [Rect::new(100.0, 100.0, 1050.0, 280.0), Rect::new(700.0, 50.0, 1200.0, 280.0), was[2]]);
+    assert_eq!(undo_len(&s), n + 1);
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(boards(&s), was);
+    assert!(s.execute("artboard.fitToArt", &json!({"index": 2})).is_err(), "no art on artboard 3");
+    assert_eq!(boards(&s), was);
+    s.execute("artboard.fitToArt", &json!({})).unwrap();
+    assert_eq!(boards(&s), [Rect::new(100.0, 100.0, 1050.0, 280.0), was[1], was[2]], "the first artboard by default");
+}
+
 // ---------- Edit Colors ----------
 
 #[test]
@@ -1012,6 +1043,35 @@ fn select_menu_commands_stay_inside_the_isolated_group() {
     sel(&mut s, &[a]);
     s.execute("select.object.allOnSameLayers", &json!({})).unwrap();
     assert_eq!(selected(&s), vec![a, b, text_inside]);
+}
+
+/// In isolation mode the Layers panel's target circle and selection column can't select an object
+/// outside the isolated group, so it can't be moved either (#2286).
+#[test]
+fn layers_panel_selects_nothing_outside_the_isolated_group() {
+    let mut s = session();
+    let a = rect(&mut s, 0.0, 0.0, 50.0, 50.0);
+    let b = rect(&mut s, 100.0, 0.0, 50.0, 50.0);
+    let outside = rect(&mut s, 300.0, 0.0, 50.0, 50.0);
+    sel(&mut s, &[a, b]);
+    let g = id_of(&s.execute("object.group", &json!({})).unwrap());
+    s.execute("object.isolate", &json!({"id": g.0})).unwrap();
+    let before = bounds(&s, outside);
+    let _ = s.execute("layer.target", &json!({"id": outside.0}));
+    assert!(!selected(&s).contains(&outside));
+    let _ = s.execute("layer.target", &json!({"id": outside.0, "add": true}));
+    assert!(!selected(&s).contains(&outside));
+    let _ = s.execute("layer.selectAll", &json!({"id": outside.0}));
+    assert!(!selected(&s).contains(&outside));
+    let _ = s.execute("layer.selectAll", &json!({"id": outside.0, "add": true}));
+    assert!(!selected(&s).contains(&outside));
+    let _ = s.execute("object.move", &json!({"dx": 10, "dy": 0}));
+    assert_eq!(bounds(&s, outside), before);
+    // Objects inside the group can still be targeted and selected.
+    s.execute("layer.target", &json!({"id": a.0})).unwrap();
+    assert_eq!(selected(&s), vec![a]);
+    s.execute("layer.selectAll", &json!({"id": b.0})).unwrap();
+    assert_eq!(selected(&s), vec![b]);
 }
 
 /// In isolation mode a recalled selection leaves out the objects outside the isolated group, and
@@ -1580,6 +1640,61 @@ fn make_release_clear_guides() {
     assert!(s.doc().unwrap().doc.guides.is_empty());
     assert!(s.doc().unwrap().doc.node(a).is_none());
     assert_eq!(undo_len(&s), n + 1);
+}
+
+/// The anchor positions of `id`, which must be a path of one open subpath, and whether it is still a guide.
+fn line_ends(s: &Session, id: NodeId) -> (Vec<(f64, f64)>, bool) {
+    let NodeKind::Path { path, guide, .. } = &node(s, id).kind else { panic!("not a path") };
+    let [sub] = &path.subpaths[..] else { panic!("not one subpath") };
+    assert!(!sub.closed);
+    (sub.anchors.iter().map(|a| (a.p.x, a.p.y)).collect(), *guide)
+}
+
+/// Release Guides turns ruler guides into paths with no fill or stroke, each in one undo step. An
+/// artboard guide becomes a line across its artboard, and a canvas guide becomes a line across the
+/// bounds of all the artboards.
+#[test]
+fn release_guides_turns_ruler_guides_into_paths() {
+    let mut s = session();
+    s.execute("artboard.new", &json!({})).unwrap();
+    let g = rect(&mut s, 0.0, 0.0, 10.0, 10.0);
+    sel(&mut s, &[g]);
+    s.execute("view.guides.make", &json!({})).unwrap();
+    s.execute("guide.add", &json!({"vertical": false, "pos": 300})).unwrap();
+    s.execute("guide.add", &json!({"vertical": false, "pos": 50, "artboard": 0})).unwrap();
+    let d = &s.doc().unwrap().doc;
+    let (ab, all) = (d.artboards[0].rect, d.artboards[0].rect.union(d.artboards[1].rect));
+    assert!(all.x1 > ab.x1);
+    let layer = s.doc().unwrap().current_layer();
+    // The selected artboard guide goes, and a selected path across its artboard takes its place.
+    s.execute("guide.select", &json!({"indexes": [1]})).unwrap();
+    let n = undo_len(&s);
+    assert_eq!(s.execute("view.guides.release", &json!({})).unwrap()["count"], 1);
+    assert_eq!((guides(&s), undo_len(&s)), (vec![(false, 300.0)], n + 1));
+    let [line] = selected(&s)[..] else { panic!("one path selected") };
+    assert_eq!(line_ends(&s, line), (vec![(ab.x0, 50.0), (ab.x1, 50.0)], false));
+    assert_eq!(node(&s, line).appearance, Appearance::basic(Paint::None, Paint::None, 0.0));
+    assert_eq!(s.doc().unwrap().doc.parent_of(line), layer);
+    assert!(matches!(node(&s, g).kind, NodeKind::Path { guide: true, .. }), "the guide path stays a guide");
+    // Undo brings the guide back.
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(guides(&s), vec![(false, 300.0), (false, 50.0)]);
+    assert!(s.doc().unwrap().doc.node(line).is_none());
+    // index releases the canvas guide as a line across the artboards.
+    assert_eq!(s.execute("view.guides.release", &json!({"index": 0})).unwrap()["count"], 1);
+    assert_eq!(guides(&s), vec![(false, 50.0)]);
+    let [line] = selected(&s)[..] else { panic!("one path selected") };
+    assert_eq!(line_ends(&s, line), (vec![(all.x0, 300.0), (all.x1, 300.0)], false));
+    // ids releases those guide paths.
+    assert_eq!(s.execute("view.guides.release", &json!({"ids": [g.0]})).unwrap()["count"], 1);
+    assert!(matches!(node(&s, g).kind, NodeKind::Path { guide: false, .. }));
+    assert_eq!(selected(&s), vec![g]);
+    // Locked guides are not released by index or ids.
+    s.execute("view.guides.lock", &json!({"locked": true})).unwrap();
+    for p in [json!({"index": 0}), json!({"ids": [g.0]})] {
+        assert!(matches!(s.execute("view.guides.release", &p), Err(EngineError::Other(m)) if m == "guides are locked"), "{p}");
+    }
+    assert_eq!(guides(&s).len(), 1);
 }
 
 #[test]

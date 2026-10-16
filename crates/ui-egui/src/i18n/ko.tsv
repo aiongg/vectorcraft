@@ -325,8 +325,11 @@
 	Remove Threading	연결 제거
 	Fit Headline	제목에 맞추기
 	Decrease Font Size	글꼴 크기 줄이기
+	Decrease Font Size by Five Steps	글꼴 크기 5단계 줄이기
 	Increase Font Size	글꼴 크기 키우기
+	Increase Font Size by Five Steps	글꼴 크기 5단계 키우기
 	Reset Tracking and Kerning	자간 및 커닝 재설정
+	Reset Horizontal Scale	가로 비율 재설정
 	Step Type	단계별 문자
 	Find Font…	글꼴 찾기…
 	Change Case	대소문자 변경
@@ -1362,6 +1365,32 @@
 	Expand:	확장:
 	Export All…	모두 내보내기…
 	Export Artboard	아트보드 내보내기
+	A File per Object	오브젝트마다 파일 1개
+	Example: {name}	예: {name}
+	Export Preset:	내보내기 사전 설정:
+	Folders:	폴더:
+	Insert	삽입
+	Nothing is selected. Select the art to export, then open this tab again.	선택된 항목이 없습니다. 내보낼 아트를 선택한 다음 이 탭을 다시 여십시오.
+	One File of the Selection	선택 영역을 파일 1개로
+	Start at:	시작 번호:
+	{n} objects selected	오브젝트 {n}개 선택됨
+	Delete Export Preset	내보내기 사전 설정 삭제
+	Export Presets	내보내기 사전 설정
+	Save Export Preset	내보내기 사전 설정 저장
+	Export Layer	레이어 내보내기
+	Export Selection	선택 영역 내보내기
+	All in One Folder	모두 폴더 하나에
+	By Size or Row	크기 또는 행별
+	By Format	형식별
+	By Artboard or Item	대지 또는 항목별
+	By Item, Then Format	항목별, 그다음 형식별
+	Document Name	문서 이름
+	Artboard or Item Name	대지 또는 항목 이름
+	Number (####)	번호(####)
+	Date (YYYYMMDD)	날짜(YYYYMMDD)
+	Date (YYYY-MM-DD)	날짜(YYYY-MM-DD)
+	Time (hhmmss)	시간(hhmmss)
+	PDF Print	인쇄용 PDF
 	Export As	다른 형식으로 내보내기
 	Export Assets	에셋 내보내기
 	Export CSS	CSS 내보내기
@@ -1417,6 +1446,7 @@
 	Fill and Stroke	칠과 선
 	Fill new strokes	새 선 칠하기
 	Keep selected	선택 유지
+	Merge only with selection	선택 영역과만 병합
 	Fill:	칠:
 	Find	찾기
 	Find Font	글꼴 찾기
@@ -3952,6 +3982,8 @@ theme	Appearance	외관
 @msg	nothing to export: the document has no visible art (or turn on Use Artboards)	내보낼 항목이 없습니다: 문서에 보이는 아트웍이 없습니다(또는 아트보드 사용을 켜세요)
 @msg	add a format to export	내보낼 형식을 추가하세요
 @msg	check an asset to export	내보낼 자산을 체크하세요
+@msg	check a layer to export	내보낼 레이어를 선택하십시오
+@msg	select the art to export first	먼저 내보낼 아트를 선택하십시오
 @msg	`{tool}` isn't a freehand tool	`{tool}`은(는) 프리핸드 도구가 아닙니다
 @msg	bad colour `{hex}` (#rrggbb)	잘못된 색상 `{hex}`(#rrggbb)
 @msg	no gradient stop or freeform point is selected	선택된 그레이디언트 정지점이나 자유형 점이 없습니다
@@ -4494,3 +4526,17 @@ lighting	Light	광원
 	Coral	코럴
 	Violet	보라
 	Pink	분홍
+	Sketch	스케치
+	Halftone Pattern…	하프톤 패턴…
+	Halftone Pattern	하프톤 패턴
+	Pattern Type	패턴 유형
+	Dot	점
+# User Interface › Color Scheme
+	Color Scheme	색 구성표
+	Modern	모던
+
+# Symbol Options › Export Type
+	Export Type:	내보내기 유형:
+	Movie Clip	무비 클립
+@msg	name is empty	이름이 비어 있습니다
+@msg	no symbol named `{n}`	이름이 `{n}`인 심볼이 없습니다

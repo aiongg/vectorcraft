@@ -309,7 +309,7 @@ objects' fills or strokes differ (`fillMixed` / `strokeMixed`, drawn as a "?" pr
 | `draw_path` | `{points \| d, closed?, fill?, stroke?, strokeWidth?, dash?, cap?, join?, opacity?, name?, effects?}` | `points` is `[[x,y],…]` or `[{x,y,in?,out?,smooth?},…]`. `d` is SVG path data. The options are below. |
 | `draw_shape` | `{shape, …geometry, fill?, stroke?, strokeWidth?, dash?, cap?, join?, opacity?, name?, effects?}` | `rectangle`/`ellipse`: `x,y,width,height` (plus `radius` for corners). `polygon`: `cx,cy,radius,sides`. `star`: `cx,cy,radius1,radius2,points`. `line`: `x1,y1,x2,y2`. |
 | `set_paint` | `{fill?, stroke?, strokeWidth?, ids?}` | Applies to the selection (or `ids`) and becomes the default for new art. |
-| `press_key` | `{key, mods?}` | Remote: a real key event. Headless: runs the command or tool bound to that shortcut, or sends the key to the busy tool (digits too: `5` while dragging with the Perspective Selection tool). |
+| `press_key` | `{key, mods?}` | Remote: a real key event. Headless: runs the command or tool bound to that shortcut, or sends the key to the busy tool (digits too: `5` while dragging with the Perspective Selection tool; `e` while dragging a Selection or Group Selection marquee). |
 | `type_text` | `{text}` | Remote only. |
 | `invoke_menu` | `{command, params?}` | Invokes a menu item by command id. Includes UI commands such as `view.*` and `window.*` in remote mode. |
 | `open_panel` | `{panel}` | Remote only. `panel` is a panel id (`layers`, `swatches`, `colorGuide`, …, as `window.panel` takes) or its display label (`"Color Guide"`), in any case. |
@@ -349,6 +349,22 @@ mode: "set"|"add"|"toggle"|"subtract"}`:
 ```json
 {"name":"pointer_gesture","arguments":{"tool":"selection","mods":{"shift":true},"events":[{"kind":"down","x":180,"y":80},{"kind":"drag","x":300,"y":200},{"kind":"up","x":380,"y":200}]}}
 ```
+
+`press_key {key: "e"}` while a Selection or Group Selection marquee is being dragged makes the marquee select only the
+objects that lie entirely inside it, measured by their geometric bounds, and `e` pressed again switches it back to the default mode. The
+Selection tool selects a group only when the whole group lies inside; Group Selection selects the objects inside
+groups, each as a whole object. Both run `select.set {ids}` (`select.toggle {ids}` with `mods.shift`). The marquee
+also selects the artboard guides that lie entirely inside it, and no canvas guide. Each marquee starts in the default
+mode. To press the key during a drag, end one
+`pointer_gesture` after the `drag` event and send the rest in another with the same `tool`, which keeps the drag:
+
+```json
+{"name":"pointer_gesture","arguments":{"tool":"selection","events":[{"kind":"down","x":80,"y":80},{"kind":"drag","x":220,"y":170}]}}
+{"name":"press_key","arguments":{"key":"e"}}
+{"name":"pointer_gesture","arguments":{"tool":"selection","events":[{"kind":"drag","x":230,"y":170},{"kind":"up","x":230,"y":170}]}}
+```
+
+With nothing being dragged, `e` chooses the tool bound to E.
 
 Appearance stacks: an object can carry several fills and strokes (`appearance.addFill`, `appearance.addStroke`), indexed
 in paint order (0 is painted first, the bottom row of the Appearance panel). `paint.setFill`, `paint.setStroke`,
@@ -542,6 +558,9 @@ with `flattenerPreset` (empty: High Resolution; `high`, `medium`, `low` or a sav
 and `flattener` options over it (as `object.flattenTransparency` takes them); images with see-through pixels count as
 transparency and rasterized areas are clipped to their regions. A file that would still have transparency fails the
 export. PDF/X-1a and PDF/X-3 files are PDF 1.3 files too.
+A page with a side longer than 14,400 pt is written with a `UserUnit` (PDF 1.6): its longer side divided by 14,400,
+rounded up to the next thousandth, with the page's sizes and coordinates in those units, so that no side is longer than
+14,400 units (ISO 32000-1, Annex C.2). In PDF 1.3 to 1.5 files and PDF/X files, such a page is written in points.
 
 An Illustrator EPS (version 9 on) or `.ai` file opens from the editing data it carries (after the EPS page; in the
 `.ai` file's PDF private data): layers and sublayers (name, order, visibility, lock, printing, preview, dimming,
@@ -973,6 +992,14 @@ moved copies), and `guide.remove {index?}` deletes one guide or the selected one
 step. With guides selected, `edit.clear` (Delete) deletes them and `object.nudge` (the arrow keys) nudges them.
 View › Guides › Lock Guides (`view.guides.lock`) deselects them and refuses these commands until unlocked.
 
+`view.guides.release {index?, ids?}` (View › Guides › Release Guides) turns guides into paths → `{count}`. With
+`index` it releases that ruler guide, and with `ids` it releases those guide paths (and the guide paths inside them).
+Otherwise it releases the selected guide paths and ruler guides, and with no guide selected it releases every guide
+path. A released ruler guide becomes a straight path with no fill or stroke, at the top of the guide's layer (or where
+new art goes, for a guide on no layer). An artboard guide becomes a line across its artboard, and a canvas guide
+becomes a line across the bounds of all the artboards. `index` and `ids` are refused while guides are locked. The
+release is one undo step, and the released paths are selected.
+
 The Selection, Direct Selection and Group Selection tools pick a guide within the selection tolerance, over the art
 (an anchor on it comes first with Direct Selection), and drag the selected guides: `mods.alt` copies them,
 `mods.shift` snaps the dragged guide to the ruler's ticks, and otherwise it snaps to whole pixels, the grid or, with
@@ -994,8 +1021,10 @@ Guides) can't be picked. An artboard guide is picked, drawn and snapped to acros
 These families are in the live catalog (`command_list` / `vectorcraft://commands`); the prompt `trace-and-style`
 already walks Image Trace. Short agent entry points:
 
-- Symbols: `symbol.list`, `symbol.new {name?, ids?}`, `symbol.place {name?, x?, y?}`, `symbol.breakLink {ids?}`,
-  `symbol.replace`, `symbol.edit`, `symbol.duplicate`, `symbol.selectInstances {name}`.
+- Symbols: `symbol.list` (each row includes `registration` 0..8 and `exportType`: `movieClip`|`graphic`),
+  `symbol.new {name?, registration?, exportType?, ids?}`, `symbol.options {name?, newName?, registration?, exportType?}`,
+  `symbol.place {name?, x?, y?}`, `symbol.breakLink {ids?}`, `symbol.replace`, `symbol.edit`, `symbol.duplicate`,
+  `symbol.selectInstances {name}`.
 - Brushes: `brush.list`, `brush.get {name}`, `brush.apply {name, ids?}`, `brush.new {type, name?, params?, ids?}`,
   `brush.setCurrent {name}`, `brush.options {name, params?}`, `brush.freehand`, `object.expandBrush {ids?}`.
 - Variables: `variable.list`, `variable.define {name, kind: text|visibility|image|graph}`, `variable.bind {variable, ids?}`,
@@ -1302,12 +1331,14 @@ groups naming items that aren't there dropped. Files written before groups load 
 
 ## Strokes on type
 
-`stroke.set` without an `item` gives type its characters' stroke: weight, cap, join, miter limit and the dash
-options go to every run (the object keeps no stroke of its own); an `item` still edits an object-level stroke added
+`stroke.set` without an `item` gives type its characters' stroke: weight, cap, join, miter limit, `align` and the
+dash options go to every run (the object keeps no stroke of its own); an `item` still edits an object-level stroke added
 with `appearance.addStroke`, which takes every stroke option (dashes, profile, opacity, blend) like a path's and paints under or over the
 characters as its place relative to the Characters row says. To stroke
-some characters, use `text.setRangeStyle {id, start, end, strokeOptions: {weight?, cap?, join?, miterLimit?, dash?,
-dashOffset?, alignDashes?}}`. `inspect_document` reports each object's stroke as `strokeOptions` (type: its first
+some characters, use `text.setRangeStyle {id, start, end, strokeOptions: {weight?, cap?, join?, miterLimit?, align?,
+dash?, dashOffset?, alignDashes?}}`. `align: "inside"|"outside"` keeps the characters' stroke on that side of the
+glyph outlines, drawn at twice the weight and clipped, while the type stays editable (beyond Illustrator); SVG export
+writes the text live and that stroke as glyph outlines over it. `inspect_document` reports each object's stroke as `strokeOptions` (type: its first
 run's) in `stroke.set` terms. `stroke.set` on a group leaves the images and symbol instances in it alone.
 
 ## Inline graphics in type
@@ -1624,6 +1655,8 @@ paths and compound paths, and `path.reverse {reversed?}` makes subpaths run coun
 {id, anchors: [[subpath, anchor]…], mode?}`) without opening their paths, in one undo step, and answers
 `{removedObjects}` (paths left with no segment go). Each removed point's neighbours keep their handle directions and
 their facing handles are refitted so one cubic follows the two old segments; two straight sides become one.
+The anchor after each removed one is then selected (the one before at an open path's end), so running
+`path.removeAnchors` again goes on along the path.
 `path.removeAnchor {id, subpath?, anchor}` (the Delete Anchor Point tool) removes one anchor the same way, and
 `path.deleteAnchors {}` (the Delete key) deletes the selected anchors with their segments, opening closed paths there.
 
@@ -1821,9 +1854,17 @@ evenly by that line between them, and two objects are enough. `object.distribute
 left or top edge of the first object, in the order of those edges, on the artboard's left or top edge, and it puts the
 right or bottom edge of the last object on the artboard's right or bottom edge, with equal gaps between the objects.
 With `to: "selection"` or `"key"`, or without `to`, `object.distribute` and `object.distributeSpacing` without `spacing`
-keep the first and last objects where they are, and `object.distribute` moves nothing with fewer than three objects.
-With `spacing`, `object.distributeSpacing` does not use `to`. With anchor points selected (Direct Selection), both
-commands space the points among themselves and do not use `to` or `artboard`.
+keep the first and last objects where they are, and `object.distribute` without `spacing` moves nothing with fewer than
+three objects. With `spacing`, `object.distributeSpacing` does not use `to`, and `object.distribute` does not use it
+while the selection has a key object. With anchor points selected (Direct Selection), both commands space the points
+among themselves and do not use `to` or `artboard`.
+
+`object.distribute {spacing}` (the Distribute Objects buttons while the selection has a key object, `select.key`) keeps
+the key object where it is, with the compound path or selected group that contains it. It places the objects' lines
+(left edges, centers or right edges; top edges, centers or bottom edges) `spacing` points apart, outward from the key
+object's line, in their order on that line. With `spacing: 0`, every object ends on the key object's line. Two objects
+are enough. Without a key object, or with anchor points selected, `object.distribute` does not use `spacing`. A
+`spacing` that is not a number is an error.
 
 The desktop app adds its active artboard, the one the Artboards panel highlights, to the `object.align`,
 `object.distribute`, `object.distributeSpacing` and `select.allOnArtboard` calls it runs without `artboard`, as it does
@@ -1841,13 +1882,20 @@ Direct Selection or Group Selection tool inside an artboard makes that artboard 
 tool, a Shift-click on an empty spot inside an artboard makes it active and keeps the selection. Choosing the Artboard
 tool (`tool.select {tool: "artboard"}`) starts it on the active artboard: its `active` option is that artboard's index.
 
-`artboard.fitToArt {index?}` (Object › Artboards › Fit to Artwork Bounds) and `artboard.fitToSelection {index?}`
-(Object › Artboards › Fit to Selected Art) resize artboard `index` (a 0-based index), or the first artboard when the
-call gives none. The desktop app adds its active artboard as `index` to the calls of these two commands that it runs
-without `index`, MCP's `run_command` calls in remote mode included. A batch passes its `artboard` on to each of their
-steps that names no `index`, as the step's `index`. When the document a step runs in has no artboard at that index,
-the step gets that document's last artboard. An action recorded in the Actions panel leaves `index` out of these
-steps, and they resize the artboard that is active when the action plays.
+`artboard.fitToArt {index? | indices?}` (Object › Artboards › Fit to Artwork Bounds) fits each artboard it names to
+the art on that artboard, in one undo step. The art is what an export draws, measured with its strokes and with the
+effects on paths, compound paths and symbol instances. An object counts for every artboard its bounds overlap, also
+when it reaches past the artboard's edge, and a group or a clipping layer counts whole. An artboard with no art on it
+keeps its size and place, and the call fails with `no artwork` when none of its artboards has art.
+`artboard.fitToSelection {index?}` (Object › Artboards › Fit to Selected Art) fits artboard `index` to the selected
+art. Both commands take 0-based indexes and resize the first artboard when the call names none. The desktop app adds
+the selected artboards (those the Artboard tool has selected, else the active one) as `indices` to the
+`artboard.fitToArt` calls it runs without `index` or `indices`. It adds its active artboard as `index` to the
+`artboard.fitToSelection` calls it runs without `index`. Both include MCP's `run_command` calls in remote mode. The
+Artboards panel menu's Fit to Artwork Bounds also passes the selected artboards. A batch passes its `artboard` on to
+each of their steps that names no `index`, as the step's `index`. When the document a step runs in has no artboard at
+that index, the step gets that document's last artboard. An action recorded in the Actions panel leaves `index` and
+`indices` out of these steps, and they resize the artboard that is active when the action plays.
 
 ```json
 {"name":"run_command","arguments":{"command":"object.align","params":{"horizontal":"left","to":"artboard","artboard":1}}}
@@ -2015,11 +2063,15 @@ Pen's second anchor at (150, 431), in line with the square's centre.
 - `typeSizeIncrement`, `trackingIncrement`, `baselineShiftIncrement`: what `type.step {attribute: "size" | "leading" |
   "tracking" | "kerning" | "baselineShift", by?}` steps by, on the text range given, the type objects in `ids`, the
   Type tool's selected text or the selected type objects. `type.size.increase` / `type.size.decrease` (Cmd+Shift+. and
-  Cmd+Shift+,) step the size; the Type tool's Alt+arrows (`press_key {key: "Right", mods: {alt: true}}`) step kerning at
+  Cmd+Shift+,) step the size. `type.size.increaseByFive` (Cmd+Alt+Shift+., `press_key {key: ".", mods: {cmd: true,
+  alt: true, shift: true}}`) and `type.size.decreaseByFive` (Cmd+Alt+Shift+,) step it by five times `typeSizeIncrement`.
+  The Type tool's Alt+arrows (`press_key {key: "Right", mods: {alt: true}}`) step kerning at
   a caret or tracking of the selection (←/→), leading (↑/↓) and baseline shift (Shift+↑/↓), five steps with Cmd/Ctrl
   too. `type.resetTracking` (Cmd+Alt+Q, `press_key {key: "Q", mods: {cmd: true, alt: true}}`) sets tracking to 0 and
   kerning to Auto in the type objects in `ids`, the Type tool's selected text or the selected type objects; at a caret
-  it resets only the kerning of the character before it.
+  it resets only the kerning of the character before it. `type.resetHorizontalScale` (Cmd+Shift+X,
+  `press_key {key: "X", mods: {cmd: true, shift: true}}`) sets the horizontal scale to 100%, as the Character panel
+  shows it, in the same text; at a caret it leaves the text as it is.
 - `missingGlyphProtection` (on by default): `text.setStyle` and `text.setRangeStyle` changing the font leave the
   characters the new font has no glyph for in the font that had one.
 - `typeSelectionByPathOnly` (off by default): on, the Selection tools (`pointer_gesture` with `selection`, and the
@@ -2576,7 +2628,23 @@ art), `includeBleed` grows each artboard by the document's bleed, `subfolders` p
 sub-folders) replaces the rows, and `settings: {png: {…}, jpg: {…}, svg: {…}, pdf: {preset}}` gives every row of a
 format its options. The document remembers the last params: `document.exportSettings`.
 
+Batch exports (#1935):
+- **What:** `layers: [id…]` (each layer's art alone) or `selection: "one" | "each"` instead of artboards
+  (`assets`, `fullDocument` as before).
+- **Names:** `name` is a pattern for every file: `<filename>` (the document), `<name>` (the artboard, asset, layer
+  or object), `<index>`, `####` (a counter zero-padded to the run of `#`, from `counterStart`; `counterPer: "item"`
+  or `"file"`), `YYYYMMDD`, `YYYY-MM-DD`, `<date>`, `<time>`, `<format>`, `<scale>` and `<suffix>` (else the row's
+  suffix ends the name; `date` sets the day the pattern uses). Different files it names alike get `-2`, `-3`….
+- **Folders:** `folders: "none" | "rows" | "format" | "item" | "itemFormat"` (all in one, a folder per row, per
+  extension, per item, or item then extension).
+- **Formats:** rows may also be `eps`, `ai` and `vectorcraft` (a document of the item alone). A PDF row with
+  `marks` (`{trim, registration, colorBars, pageInfo}`) and a suffix such as `-print` sits next to a plain PDF row.
+- **Presets:** `document.exportPresets.list` (built-in: Logo Package, Print-Ready PDF), `.save {name, settings}`
+  (kept with the preferences) and `.delete {name}`; `exportPreset: "<name>"` uses one under the call's own params.
+
 ```json
+{"name":"run_command","arguments":{"command":"document.exportForScreens","params":{"range":"1-3","name":"COMPANY-Logo-<filename>-####-YYYYMMDD","folders":"format","formats":[{"format":"svg"},{"format":"png"},{"format":"pdf"},{"format":"pdf","suffix":"-print","marks":{"trim":true,"registration":true,"colorBars":true,"pageInfo":true}}]}}}
+{"name":"run_command","arguments":{"command":"document.exportForScreens","params":{"exportPreset":"Logo Package","layers":[2,9]}}}
 {"name":"run_command","arguments":{"command":"document.exportForScreens","params":{"preset":"density","zip":true}}}
 {"name":"run_command","arguments":{"command":"document.exportForScreens","params":{"range":"1-2","formats":[{"format":"png","scale":"512w"},{"format":"jpg","quality":80,"scale":"2x"},{"format":"svg"}],"settings":{"png":{"background":"white"}}}}}
 {"name":"run_command","arguments":{"command":"document.exportSettings","params":{}}}
@@ -2640,7 +2708,9 @@ as they do for art larger than the imageable area. Type in a font family that is
 font, and the warnings of `file.print` and `print.preview` name those families. They count only type that prints:
 visible type that fits its frame or path, on the layers `printLayers` picks, on the paper of the artboards or tiles
 that print, and the type in the symbols, patterns, scatter brushes, opacity masks and placed documents of the art that
-prints.
+prints. The warnings also give the ids of the area type and type on a path that print and whose text doesn't fit
+(objects of the document only, not type in the art of symbols, patterns, brushes, opacity masks or placed documents;
+see [Fitting area type](#fitting-area-type-auto-size-shrink-text-to-fit-overflow)).
 
 ```json
 {"name":"run_command","arguments":{"command":"print.setup","params":{"settings":{"media":"a4","scaling":"fit","marks":{"trim":true}}}}}
@@ -3082,7 +3152,8 @@ Text that doesn't fit is drawn up to the last line that does, so a one-line head
 draws nothing. The commands that make type or change what it holds say so in their own reply: `text.create`,
 `text.createInPath`, `text.setText` and `text.setStyle` add `overflow: [id…]` (the area type and type on a path among
 the objects they made or changed whose text doesn't fit), and the `add_text` tool adds `overflow: true`. The key is
-left out when everything fits.
+left out when everything fits. The warnings of `file.print` and `print.preview` give the ids of the objects that print
+and whose text doesn't fit: the first 20 ids, then how many more.
 
 ```json
 {"name":"run_command","arguments":{"command":"text.areaOptions","params":{"fit":"shrinkText","fitMinPercent":60}}}

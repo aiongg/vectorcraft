@@ -637,9 +637,11 @@ impl VectorcraftApp {
             guides: self.ui.view.guides,
             snap_to_grid: self.ui.view.snap_to_grid,
             snap_to_pixel: self.ui.view.snap_to_pixel,
-            show_bbox: self.ui.view.bounding_box,
+            // View › Hide Edges: the canvas draws neither the bounding box (with the type widget)
+            // nor the Live Corners widgets, and the tools do not answer the pointer on them.
+            show_bbox: self.ui.view.bounding_box && self.ui.view.edges,
             snap_to_point: self.ui.view.snap_to_point,
-            corner_widgets: self.ui.view.corner_widgets,
+            corner_widgets: self.ui.view.corner_widgets && self.ui.view.edges,
             screen: self.screen_frame(),
         }
     }
@@ -690,15 +692,21 @@ impl VectorcraftApp {
         {
             p.insert("artboard".into(), serde_json::json!(panels::artboards::selected(self, n)));
         }
-        // Object › Artboards › Fit to Artwork Bounds and Fit to Selected Art resize the active
-        // artboard, which the app passes as their `index`.
+        // Object › Artboards › Fit to Artwork Bounds resizes the selected artboards (the Artboard
+        // tool's, else the active one), which the app passes as its `indices`, and Fit to Selected
+        // Art resizes the active artboard, which the app passes as its `index`.
         if vectorcraft_engine::FIT_ACTIVE_ARTBOARD.contains(&id)
             && params.get("index").is_none()
+            && params.get("indices").is_none()
             && self.view().is_some()
             && let Some(n) = self.session.active().map(|d| d.doc.artboards.len())
             && let Some(p) = params.as_object_mut()
         {
-            p.insert("index".into(), serde_json::json!(panels::artboards::selected(self, n)));
+            if id == "artboard.fitToArt" {
+                p.insert("indices".into(), serde_json::json!(panels::artboards::picked(self, n)));
+            } else {
+                p.insert("index".into(), serde_json::json!(panels::artboards::selected(self, n)));
+            }
         }
         if id.starts_with("edit.paste") {
             if let Err(e) = self.adopt_system_clipboard() {

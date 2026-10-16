@@ -783,6 +783,7 @@
 	Decimal:	Thập phân:
 	Decorative	Trang trí
 	Decrease Font Size	Giảm cỡ chữ
+	Decrease Font Size by Five Steps	Giảm cỡ chữ năm bước
 	Default	Mặc định
 	Default Actions	Hành động mặc định
 	Default Figure	Chữ số mặc định
@@ -1134,6 +1135,32 @@
 	Export All…	Xuất tất cả…
 	Export and Clipboard Transparency Flattener Settings	Cài đặt làm phẳng độ trong suốt khi xuất và dán
 	Export Artboard	Xuất bảng vẽ
+	A File per Object	Mỗi đối tượng một tệp
+	Example: {name}	Ví dụ: {name}
+	Export Preset:	Cài đặt sẵn xuất:
+	Folders:	Thư mục:
+	Insert	Chèn
+	Nothing is selected. Select the art to export, then open this tab again.	Chưa chọn gì. Hãy chọn hình cần xuất rồi mở lại thẻ này.
+	One File of the Selection	Một tệp cho vùng chọn
+	Start at:	Bắt đầu từ:
+	{n} objects selected	Đã chọn {n} đối tượng
+	Delete Export Preset	Xóa cài đặt sẵn xuất
+	Export Presets	Cài đặt sẵn xuất
+	Save Export Preset	Lưu cài đặt sẵn xuất
+	Export Layer	Xuất lớp
+	Export Selection	Xuất vùng chọn
+	All in One Folder	Tất cả trong một thư mục
+	By Size or Row	Theo kích thước hoặc hàng
+	By Format	Theo định dạng
+	By Artboard or Item	Theo bảng vẽ hoặc mục
+	By Item, Then Format	Theo mục, rồi theo định dạng
+	Document Name	Tên tài liệu
+	Artboard or Item Name	Tên bảng vẽ hoặc mục
+	Number (####)	Số (####)
+	Date (YYYYMMDD)	Ngày (YYYYMMDD)
+	Date (YYYY-MM-DD)	Ngày (YYYY-MM-DD)
+	Time (hhmmss)	Giờ (hhmmss)
+	PDF Print	PDF in ấn
 	Export As	Xuất thành
 	Export As PNG…	Xuất thành PNG…
 	Export As SVG…	Xuất thành SVG…
@@ -1211,6 +1238,7 @@
 	Fill Grid	Tô lưới
 	Fill new strokes	Tô nét mới
 	Keep selected	Giữ trạng thái đã chọn
+	Merge only with selection	Chỉ hợp nhất với vùng chọn
 	Fill New Type Objects With Placeholder Text	Tô đối tượng chữ mới bằng văn bản giữ chỗ
 	Fill Rule	Quy tắc tô
 	Fill with Placeholder Text	Tô bằng văn bản giữ chỗ
@@ -1589,6 +1617,7 @@
 	Include SVG Code	Bao gồm mã SVG
 	Include Swatches for Tints	Bao gồm mẫu màu cho sắc pha
 	Increase Font Size	Tăng cỡ chữ
+	Increase Font Size by Five Steps	Tăng cỡ chữ năm bước
 	Inflate…	Phình…
 	Info	Thông tin
 	Ink	Mực
@@ -2671,6 +2700,7 @@
 	Reset Envelope Mesh	Đặt lại lưới Envelope
 	Reset Envelope Shape	Đặt lại hình dạng Envelope
 	Reset Essentials	Đặt lại Essentials
+	Reset Horizontal Scale	Đặt lại tỷ lệ ngang
 	Reset Keyboard Shortcuts	Đặt lại phím tắt
 	Reset OpenType Features	Đặt lại tính năng OpenType
 	Reset Panel	Đặt lại bảng
@@ -3863,6 +3893,8 @@ theme	Appearance	Giao diện
 @msg	cannot read PDF: {0}	không thể đọc PDF: {0}
 @msg	cannot split an open path at its end point	không thể tách đường dẫn mở tại điểm cuối
 @msg	check an asset to export	hãy chọn một asset để xuất
+@msg	check a layer to export	hãy đánh dấu một lớp để xuất
+@msg	select the art to export first	hãy chọn hình cần xuất trước
 @msg	choice must be "merge" or "add", not `{choice}`	lựa chọn phải là "merge" hoặc "add", không phải `{choice}`
 @msg	choose a direction to divide in	hãy chọn hướng để chia
 @msg	choose a folder to export to	hãy chọn thư mục để xuất vào
@@ -4510,3 +4542,17 @@ theme	Appearance	Giao diện
 	Coral	San hô
 	Violet	Tím
 	Pink	Hồng
+	Sketch	Phác thảo
+	Halftone Pattern…	Mẫu bán sắc…
+	Halftone Pattern	Mẫu bán sắc
+	Pattern Type	Loại mẫu
+	Dot	Chấm
+# User Interface › Color Scheme
+	Color Scheme	Bảng phối màu
+	Modern	Hiện đại
+
+# Symbol Options › Export Type
+	Export Type:	Kiểu xuất:
+	Movie Clip	Clip phim
+@msg	name is empty	tên trống
+@msg	no symbol named `{n}`	không có biểu tượng nào tên `{n}`

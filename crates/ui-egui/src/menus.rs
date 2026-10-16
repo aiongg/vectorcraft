@@ -336,7 +336,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "Shift+Tab",
         "{} show/hide the dock and the floating panels (hiding them closes a panel popped out of the icon column), leaving the toolbar and the Control bar as they are; returns whether the panels show",
     ),
-    ("window.panel", "Show Panel", "", "{panel: id} e.g. layers, swatches, stroke (case-insensitive; display labels like \"Layers\" work too)"),
+    (
+        "window.panel",
+        "Show Panel",
+        "",
+        "{panel: id, toggle?: bool} e.g. layers, swatches, stroke (case-insensitive; display labels like \"Layers\" work too); toggle (the Window menu) hides a panel that shows, and shows it again where it was",
+    ),
     (
         "window.panel.layout",
         "Change Panel Layout",
@@ -460,13 +465,13 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "ui.symbolOptions",
         "Symbol Options…",
         "",
-        "{} open Symbol Options for a new symbol made from the selection, what the Symbols panel's New Symbol opens (dialog `symbolOptions`, fields `name` and `registration` 0..8 on the 9-point grid, default centre; default name the first free \"New Symbol\"/\"New Symbol N\"); OK runs symbol.new {name, registration}",
+        "{name?} open Symbol Options (dialog `symbolOptions`, fields `name`, `exportType`: movieClip|graphic, `registration` 0..8). Without `name` and with a selection: New Symbol (default name the first free \"New Symbol\"/\"New Symbol N\", Export Type Movie Clip, Registration centre); OK runs symbol.new {name, exportType, registration}. With `edit: true` or `name`: edit that symbol; OK runs symbol.options {name, newName?, exportType, registration}",
     ),
     (
         "tool.options",
         "Tool Options…",
         "",
-        "{tool: id} what double-clicking a tool button opens: hand → fits the artboard in the window (view.fitArtboard), zoom → 100% (view.actualSize), rotate|scale|reflect|shear → that Object › Transform dialog (dialog `rotate`, `scale`, `reflect` or `shear`; error `nothing selected` without a selection), selection|directSelection|groupSelection → the Move dialog (dialog `move`; the same error), gradient|magicWand → the Gradient or Magic Wand panel (window.panel), artboard → Artboard Options of the active artboard (dialog `artboardOptions`, fields index, name, x, y, width, height; OK runs artboard.setProps), flare → Flare Tool Options (dialog `flareOptions`, fields diameter and pathLength (pt), opacity, brightness, growth, fuzziness, longest, rayFuzziness, largest (%), rays, rings, direction (°), raysOn, ringsOn; OK runs tool.setOption {tool: \"flare\", values}: the next flare dragged out uses them, and a Flare click's dialog, which also has x and y, draws one there with them), columnGraph|stackedColumnGraph|barGraph|stackedBarGraph|lineGraph|areaGraph|scatterGraph|pieGraph|radarGraph → Graph Type for the selected graph (dialog `command` running graph.setType; an error without one), symbolSprayer|symbolShifter|symbolScruncher|symbolSizer|symbolSpinner|symbolStainer|symbolScreener|symbolStyler → Symbolism Tools Options (dialog `symbolismOptions`, fields tool, diameter (pt), intensity and density (1–10), shared by the eight tools; OK runs tool.setOption {tool, values}), blend → Blend Options, perspectiveGrid → Perspective Grid Options, eyedropper → Eyedropper Options (dialog `eyedropperOptions`, fields sampleSize, pickUp, apply; OK runs eyedropper.setOptions), printTiling → resets the print tiling (print.tiling.set {reset: true}), warp|twirl|pucker|bloat|scallop|crystallize|wrinkle → that tool's Tool Options (dialog `liquifyOptions`, fields tool, width, height, angle, intensity %, usePressure, detail, simplify, simplifyOn, rate, complexity, horizontal %, vertical %, affectAnchors, affectIn, affectOut, showBrush; OK runs tool.setOption {tool, values}), pencil|paintbrush|smooth|blobBrush|eraser → that tool's Tool Options (dialog `freehandOptions`, fields tool and the options the tool keeps: fidelity (pt), fill, keepSelected, closeWithin and editWithin (px, 0 is off), size (pt); OK runs tool.setOption {tool, values})",
+        "{tool: id} what double-clicking a tool button opens: hand → fits the artboard in the window (view.fitArtboard), zoom → 100% (view.actualSize), rotate|scale|reflect|shear → that Object › Transform dialog (dialog `rotate`, `scale`, `reflect` or `shear`; error `nothing selected` without a selection), selection|directSelection|groupSelection → the Move dialog (dialog `move`; the same error), gradient|magicWand → the Gradient or Magic Wand panel (window.panel), artboard → Artboard Options of the active artboard (dialog `artboardOptions`, fields index, name, x, y, width, height; OK runs artboard.setProps), flare → Flare Tool Options (dialog `flareOptions`, fields diameter and pathLength (pt), opacity, brightness, growth, fuzziness, longest, rayFuzziness, largest (%), rays, rings, direction (°), raysOn, ringsOn; OK runs tool.setOption {tool: \"flare\", values}: the next flare dragged out uses them, and a Flare click's dialog, which also has x and y, draws one there with them), columnGraph|stackedColumnGraph|barGraph|stackedBarGraph|lineGraph|areaGraph|scatterGraph|pieGraph|radarGraph → Graph Type for the selected graph (dialog `command` running graph.setType; an error without one), symbolSprayer|symbolShifter|symbolScruncher|symbolSizer|symbolSpinner|symbolStainer|symbolScreener|symbolStyler → Symbolism Tools Options (dialog `symbolismOptions`, fields tool, diameter (pt), intensity and density (1–10), shared by the eight tools; OK runs tool.setOption {tool, values}), blend → Blend Options, perspectiveGrid → Perspective Grid Options, eyedropper → Eyedropper Options (dialog `eyedropperOptions`, fields sampleSize, pickUp, apply; OK runs eyedropper.setOptions), printTiling → resets the print tiling (print.tiling.set {reset: true}), warp|twirl|pucker|bloat|scallop|crystallize|wrinkle → that tool's Tool Options (dialog `liquifyOptions`, fields tool, width, height, angle, intensity %, usePressure, detail, simplify, simplifyOn, rate, complexity, horizontal %, vertical %, affectAnchors, affectIn, affectOut, showBrush; OK runs tool.setOption {tool, values}), pencil|paintbrush|smooth|blobBrush|eraser → that tool's Tool Options (dialog `freehandOptions`, fields tool and the options the tool keeps: fidelity (pt), fill, keepSelected (on for pencil and paintbrush, off for blobBrush), mergeOnlySelection (off), closeWithin and editWithin (px, 0 is off), size (pt); OK runs tool.setOption {tool, values})",
     ),
     (
         "ui.colorGuideOptions",
@@ -996,6 +1001,16 @@ pub fn check_params(session: &vectorcraft_engine::Session, id: &str, params: &Va
 }
 
 pub fn run_ui_command(app: &mut VectorcraftApp, id: &str, p: &Value) -> Option<Result<Value, String>> {
+    // The Window menu's panel items toggle like its other checked items (#2361); the panel's
+    // other ways in (shortcuts, Show Properties Panel, a tool's double-click) only show it.
+    if id == "window.panel" && p.get("toggle").and_then(Value::as_bool) == Some(true) && checked(app, id, p) == Some(true) {
+        let panel = p.get("panel").and_then(Value::as_str).and_then(normalize_panel).unwrap_or_default();
+        if app.ui.open_panel.as_deref() == Some(panel) {
+            app.ui.open_panel = None;
+            return Some(Ok(json!({"open": null})));
+        }
+        return Some(app.run("window.panel.close", json!({"panel": panel})));
+    }
     if let Some(result) = crate::panel_docking::command(app, id, p) {
         return Some(result);
     }
@@ -1451,7 +1466,15 @@ pub fn run_ui_command(app: &mut VectorcraftApp, id: &str, p: &Value) -> Option<R
         "ui.colorPicker" => crate::dialogs::open_color_picker(app, p),
         "ui.sampleScreenColor" => crate::screen_color::start(app, p),
         "ui.graphicStyleOptions" => crate::dialogs::graphic_style_options::open(app, s("name").as_deref()),
-        "ui.symbolOptions" => crate::dialogs::symbol_options::open(app),
+        "ui.symbolOptions" => {
+            let name = s("name");
+            let edit = p.get("edit").and_then(Value::as_bool).unwrap_or(false);
+            if edit || name.is_some() {
+                crate::dialogs::symbol_options::open_edit(app, name.as_deref())
+            } else {
+                crate::dialogs::symbol_options::open(app)
+            }
+        }
         "ui.brushOptions" => crate::dialogs::brush_options::open(app, s("name").as_deref()),
         "tool.options" => crate::toolbar::open_options(app, &s("tool").unwrap_or_default()),
         "ui.colorGuideOptions" => {
@@ -1867,6 +1890,18 @@ fn effect_item_label(id: &str, p: &Value) -> Option<String> {
     (!shown.is_empty()).then(|| shown.to_string())
 }
 
+/// The label of an item of the canvas context menu's Unlock submenu (`layer.setProps` with one id
+/// and `locked: false`): the object's name as the Layers panel shows it in `lang`
+/// ([`crate::panels::layers::shown_name`]). `None` for any other item, or when the object is gone.
+fn unlock_item_label(app: &VectorcraftApp, id: &str, p: &Value, lang: crate::i18n::Lang) -> Option<String> {
+    if id != "layer.setProps" || p.get("locked") != Some(&Value::Bool(false)) {
+        return None;
+    }
+    let [one] = p.get("ids")?.as_array()?.as_slice() else { return None };
+    let n = app.session.active()?.doc.node(vectorcraft_doc::NodeId(one.as_u64()?))?;
+    Some(crate::panels::layers::shown_name(app, n, lang))
+}
+
 /// Menu slots that are left out while they have nothing to show (unused saved views, recent files,
 /// User Defined swatch and graphic style libraries).
 fn hidden_when_disabled(id: &str) -> bool {
@@ -1999,7 +2034,10 @@ pub fn entry<'a>(app: &VectorcraftApp, it: &'a Item) -> Option<Entry<'a>> {
             Entry::Item(Row {
                 command: Some((id, p)),
                 source: label,
-                label: effect_item_label(id, p).unwrap_or_else(|| display_label(app, id, label)).into(),
+                label: effect_item_label(id, p)
+                    .or_else(|| unlock_item_label(app, id, p, crate::i18n::current()))
+                    .unwrap_or_else(|| display_label(app, id, label))
+                    .into(),
                 shortcut: item_shortcut(id, p),
                 enabled,
                 checked,
@@ -2209,7 +2247,7 @@ pub fn menu_tree() -> Vec<(&'static str, Vec<Item>)> {
 }
 
 pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
-    let panel = |label: &'static str, id: &'static str| cp(label, "window.panel", json!({ "panel": id }));
+    let panel = |label: &'static str, id: &'static str| cp(label, "window.panel", json!({ "panel": id, "toggle": true }));
     vec![
         (
             // The application menu: About and Discord only. The in-window bar never shows it (File
@@ -2909,6 +2947,20 @@ pub fn context_items(app: &VectorcraftApp) -> Vec<Item> {
     if st.isolation.is_some() {
         v.extend([c("Exit Isolation Mode", "object.exitIsolation"), Sep]);
     }
+    // The locked objects under the pointer at the right-click, each unlocked as the Layers panel's
+    // lock column does. `unlock_item_label` shows each object's name.
+    let unlock: Vec<Item> = app
+        .ui
+        .context_locked
+        .iter()
+        .filter(|(uid, _)| *uid == st.uid)
+        .flat_map(|(_, ids)| ids)
+        .filter(|id| st.doc.node(**id).is_some_and(|n| n.locked))
+        .map(|id| cp("Unlock", "layer.setProps", json!({ "ids": [id.0], "locked": false })))
+        .collect();
+    if !unlock.is_empty() {
+        v.extend([sub("Unlock", unlock), Sep]);
+    }
     if roots.is_empty() {
         v.extend([
             c("Paste", "edit.paste"),
@@ -3510,7 +3562,7 @@ fn flatten(app: &VectorcraftApp, path: Vec<String>, items: &[Item], out: &mut Ve
                 let Some((enabled, _)) = shown_state(app, id, p) else { continue };
                 out.push(MenuEntry {
                     path: path.clone(),
-                    label: dynamic_label(app, id, l),
+                    label: unlock_item_label(app, id, p, crate::i18n::Lang::EN).unwrap_or_else(|| dynamic_label(app, id, l)),
                     command: Some(id.to_string()),
                     params: p.clone(),
                     enabled,
@@ -3639,13 +3691,14 @@ fn font_items(english_names: bool) -> Vec<Item> {
 /// vector effects): (submenu, the catalogue's menu path of its effects).
 /// The raster Stylize submenu shares its path with the vector one and lists only the effects at
 /// that path that [`vectorcraft_effects::PIXEL_EFFECTS`] names.
-const RASTER_MENUS: [(&str, &[&str]); 9] = [
+const RASTER_MENUS: [(&str, &[&str]); 10] = [
     ("Artistic", &["Effect", "Artistic"]),
     ("Blur", &["Effect", "Blur"]),
     ("Brush Strokes", &["Effect", "Brush Strokes"]),
     ("Distort", &["Effect", "Distort"]),
     ("Pixelate", &["Effect", "Pixelate"]),
     ("Sharpen", &["Effect", "Sharpen"]),
+    ("Sketch", &["Effect", "Sketch"]),
     ("Stylize", &["Effect", "Stylize"]),
     ("Texture", &["Effect", "Texture"]),
     ("Video", &["Effect", "Video"]),
@@ -3757,6 +3810,7 @@ pub fn item_shortcut(id: &str, p: &Value) -> Option<&'static str> {
 pub const CONTEXT_LABELS: &[&str] = &[
     "Isolate Selected Group",
     "Exit Isolation Mode",
+    "Unlock",
     "Make Clipping Mask",
     "Release Clipping Mask",
     "Make Compound Path",
