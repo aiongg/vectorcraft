@@ -12,9 +12,9 @@
 //! {stop}`) and switches back to that tool.
 
 use serde_json::{Value, json};
-use vectorcraft_color::{Color, Paint};
+use vectorcraft_color::{Color, Paint, cms};
 use vectorcraft_doc::hit::{HitKind, hit_test, hit_test_visible};
-use vectorcraft_doc::{Node, NodeKind};
+use vectorcraft_doc::{ColorMode, Node, NodeKind};
 use vectorcraft_geom::Point;
 
 use super::paint_owner;
@@ -50,15 +50,28 @@ fn paint_sample(n: &Node, on_stroke: bool, p: Point) -> Option<Color> {
     paint_color_at(paint, Some(bounds), p)
 }
 
-/// The colour of image `n`'s pixels at `p`, averaged over the raster sample size.
+/// The colour of image `n`'s pixels at `p`, averaged over the raster sample size. In a CMYK
+/// document it is CMYK: an RGB image's pixels convert through the colour settings, as the
+/// document's colours do; a CMYK image gives back its inks.
 fn image_color_at(cx: &ToolContext, n: &Node, p: Point) -> Option<Color> {
     let NodeKind::Image(im) = &n.kind else { return None };
     if im.xf.determinant().abs() < 1e-12 {
         return None;
     }
     let px = im.xf.inverse() * p;
-    let [r, g, b, _] = cx.doc.images.get(&im.key)?.sample_object(px.x, px.y, (im.width, im.height), cx.raster_sample)?;
-    Some(Color::rgb8(r, g, b))
+    let blob = cx.doc.images.get(&im.key)?;
+    let [r, g, b, _] = blob.sample_object(px.x, px.y, (im.width, im.height), cx.raster_sample)?;
+    let rgb = Color::rgb8(r, g, b);
+    if cx.doc.color_mode != ColorMode::Cmyk {
+        return Some(rgb);
+    }
+    // The decoder turns a CMYK JPEG's or TIFF's inks into RGB with the profile-free formula, which
+    // the profile-free separation inverts.
+    if blob.is_cmyk() {
+        return Some(rgb.in_model(cms::Model::Cmyk));
+    }
+    let cms = cms::active();
+    Some(cms.convert(&rgb, cms::Model::Cmyk, cms.settings().intent))
 }
 
 impl Tool for EyedropperTool {

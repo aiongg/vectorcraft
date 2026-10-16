@@ -148,22 +148,31 @@ fn cmyk_stays_cmyk() {
     let _ = src;
 }
 
+fn png_of(img: &image::RgbaImage) -> ImageBlob {
+    let mut png = vec![];
+    img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+    ImageBlob::png(png)
+}
+
+/// `blob` as a `width` x `height` pixel image at (300, 0), 100 pt per pixel.
+fn place_image(s: &mut Session, blob: ImageBlob, width: u32, height: u32) {
+    s.edit("Place", |d, _| {
+        d.images.insert("px".into(), blob);
+        let l = d.layers[0].id;
+        let id = d.alloc_id();
+        let xf = vectorcraft_geom::Affine::translate((300.0, 0.0)) * vectorcraft_geom::Affine::scale(100.0);
+        let im = ImageObject { key: "px".into(), width, height, xf, link: None, placement: Default::default() };
+        d.insert(Some(l), 0, Node::new(id, NodeKind::Image(Box::new(im)))).map_err(|e| crate::EngineError::Other(e.to_string()))
+    })
+    .unwrap();
+}
+
 #[test]
 fn clicking_an_image_samples_its_pixel() {
     let mut s = session();
     // Two pixels, orange and teal, 100 pt each, at (300, 0).
     let img = image::RgbaImage::from_raw(2, 1, [[255, 128, 0, 255], [0, 128, 128, 255]].concat()).unwrap();
-    let mut png = vec![];
-    img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
-    s.edit("Place", |d, _| {
-        d.images.insert("px".into(), ImageBlob::png(png));
-        let l = d.layers[0].id;
-        let id = d.alloc_id();
-        let xf = vectorcraft_geom::Affine::translate((300.0, 0.0)) * vectorcraft_geom::Affine::scale(100.0);
-        let im = ImageObject { key: "px".into(), width: 2, height: 1, xf, link: None, placement: Default::default() };
-        d.insert(Some(l), 0, Node::new(id, NodeKind::Image(Box::new(im)))).map_err(|e| crate::EngineError::Other(e.to_string()))
-    })
-    .unwrap();
+    place_image(&mut s, png_of(&img), 2, 1);
     let dst = rect(&mut s, 10.0);
     click(&mut s, 450.0, 50.0, Mods::default());
     // Compared as stored (not as displayed through the working RGB space).
@@ -171,6 +180,33 @@ fn clicking_an_image_samples_its_pixel() {
     s.execute("eyedropper.setOptions", &json!({"sampleSize": 5})).unwrap();
     click(&mut s, 350.0, 50.0, Mods::default());
     assert_eq!(node(&s, dst).appearance.fill_paint().color(), Some(Color::rgb8(128, 128, 64)), "5 x 5 average of both pixels");
+}
+
+/// In a CMYK document an RGB image's pixel separates through the colour settings, as the
+/// document's colours do, not with the profile-free formula (#2276); a CMYK image's pixel gives
+/// back its inks.
+#[test]
+fn an_image_sampled_in_a_cmyk_document_converts_through_the_colour_settings() {
+    use vectorcraft_color::cms;
+    let mut s = Session::new();
+    s.execute("file.new", &json!({"width": 800, "height": 600, "colorMode": "cmyk"})).unwrap();
+    let img = image::RgbaImage::from_raw(1, 1, vec![83, 170, 223, 255]).unwrap();
+    place_image(&mut s, png_of(&img), 1, 1);
+    let dst = rect(&mut s, 10.0);
+    click(&mut s, 350.0, 50.0, Mods::default());
+    let got = node(&s, dst).appearance.fill_paint().color().unwrap();
+    let c = cms::active();
+    let managed = c.convert(&Color::rgb8(83, 170, 223), cms::Model::Cmyk, c.settings().intent);
+    assert_eq!(got, managed);
+    assert_ne!(got, Color::rgb8(83, 170, 223).in_model(cms::Model::Cmyk), "not the profile-free separation");
+
+    let inks = vectorcraft_doc::cmyk::Inks::new(1, 1, vec![166, 41, 0, 0]).unwrap();
+    place_image(&mut s, ImageBlob::cmyk_tiff(&inks).unwrap(), 1, 1);
+    click(&mut s, 350.0, 50.0, Mods::default());
+    let Some(Color::Cmyk { c, m, y, k }) = node(&s, dst).appearance.fill_paint().color() else { panic!("not CMYK") };
+    for (got, want) in [(c, 166), (m, 41), (y, 0), (k, 0)] {
+        assert!((got * 255.0 - want as f32).abs() <= 1.0, "inks {:?}", [c, m, y, k]);
+    }
 }
 
 #[test]
