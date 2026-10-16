@@ -702,6 +702,37 @@ fn split_into_grid_options() {
     assert!(s.doc().unwrap().doc.node(back).is_some());
 }
 
+/// A 100 × 100 grid inside a group: the cells replace the path in its group, row by row, between
+/// the siblings it had, and come back selected in that order as one undo step.
+#[test]
+fn split_into_grid_large_grid_keeps_order() {
+    let mut s = session();
+    let below = rect(&mut s, 0.0, 0.0, 10.0, 10.0);
+    let path = rect(&mut s, 0.0, 0.0, 1000.0, 1000.0);
+    let above = rect(&mut s, 0.0, 0.0, 10.0, 10.0);
+    s.execute("select.set", &json!({"ids": [below.0, path.0, above.0]})).unwrap();
+    s.execute("object.group", &json!({})).unwrap();
+    s.execute("select.set", &json!({"ids": [path.0]})).unwrap();
+    let undo = s.doc().unwrap().history.undo.len();
+    let r = ids(&s.execute("object.path.splitIntoGrid", &json!({"rows": 100, "columns": 100, "gutter": 0})).unwrap());
+    assert_eq!(r.len(), 10_000);
+    let children = |s: &Session| -> Vec<NodeId> {
+        let group = s.doc().unwrap().doc.layers[0].children().unwrap()[0].clone();
+        group.children().unwrap().iter().map(|n| n.id).collect()
+    };
+    assert_eq!(children(&s), [vec![below], r.clone(), vec![above]].concat());
+    assert!(close(bounds(&s, r[0]), Rect::new(0.0, 0.0, 10.0, 10.0), 1e-9));
+    assert!(close(bounds(&s, r[1]), Rect::new(10.0, 0.0, 20.0, 10.0), 1e-9));
+    assert!(close(bounds(&s, r[100]), Rect::new(0.0, 10.0, 10.0, 20.0), 1e-9));
+    assert!(close(bounds(&s, r[9_999]), Rect::new(990.0, 990.0, 1000.0, 1000.0), 1e-9));
+    assert!(r.windows(2).all(|w| w[0].0 < w[1].0), "ids allocated in cell order");
+    let st = s.doc().unwrap();
+    assert_eq!(st.selection.objects, r);
+    assert_eq!(st.history.undo.len(), undo + 1);
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(children(&s), [below, path, above]);
+}
+
 #[test]
 fn clean_up_removes_junk() {
     let mut s = session();
