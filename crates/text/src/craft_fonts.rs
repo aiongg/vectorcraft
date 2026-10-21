@@ -92,13 +92,6 @@ fn document_fonts_from(fonts: &[CraftFont]) -> Vec<&CraftFont> {
     v
 }
 
-/// The craft-fonts faces for Georgian UI text (Noto Sans Georgian), in manifest order. The UI fonts
-/// have no Georgian letters. Empty when built without craft-fonts, and on the web, which fetches
-/// the face at startup (`web-fonts.txt`) instead of embedding it.
-pub fn georgian_ui_fonts() -> Vec<&'static CraftFont> {
-    CRAFT_FONTS.iter().filter(|f| f.is_georgian() && !f.is_japanese()).collect()
-}
-
 /// The craft-fonts faces for Japanese text, best for UI text first: Gothic (sans) families, then
 /// the others; `bold` puts bold faces before regular ones. Empty when built without craft-fonts.
 pub fn japanese_ui_fonts(bold: bool) -> Vec<&'static CraftFont> {

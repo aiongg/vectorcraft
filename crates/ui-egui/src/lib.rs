@@ -58,7 +58,6 @@ pub mod thumb_worker;
 pub mod titlebar;
 pub mod toolbar;
 pub mod touch;
-mod ui_fonts;
 pub mod unsaved;
 pub mod widgets;
 pub mod workspaces;
@@ -417,8 +416,8 @@ pub struct VectorcraftApp {
     /// The egui context the UI's textures were uploaded to (0: none yet; see
     /// [`Self::adopt_context`]).
     context: u64,
-    /// Installed fonts added to the UI's for characters its own fonts lack (CJK names…).
-    ui_fonts: ui_fonts::UiFonts,
+    /// The UI language the installed fonts are for: its own faces lead the stack.
+    fonts_language: Option<i18n::Lang>,
     frame: u64,
     last_time: f64,
     /// Canvas rect of the last frame (screen points), for control-channel coordinate mapping.
@@ -565,7 +564,7 @@ impl VectorcraftApp {
             styled: false,
             fonts_ready: false,
             context: 0,
-            ui_fonts: Default::default(),
+            fonts_language: None,
             frame: 0,
             last_time: 0.0,
             canvas_rect: None,
@@ -1181,12 +1180,15 @@ impl VectorcraftApp {
         }
         self.adopt_context(ctx);
         if !self.styled {
-            theme::install_fonts(ctx);
             theme::apply(ctx, self.ui.brightness);
             egui_extras::install_image_loaders(ctx);
-            self.styled = true;
         } else {
             self.fonts_ready = true;
+        }
+        if !self.styled || self.fonts_language != Some(lang) {
+            theme::install_fonts(ctx);
+            self.fonts_language = Some(lang);
+            self.styled = true;
         }
         self.frame += 1;
         let now = ctx.input(|i| i.time);
@@ -1480,7 +1482,6 @@ impl VectorcraftApp {
         if self.custom_titlebar {
             titlebar::resize_zones(ui);
         }
-        self.ui_fonts.frame(&ctx);
         scrub::end_frame(self, &ctx);
         native_menu::sync(self, &ctx);
         self.drop_formats_after_egui_copy(&ctx);

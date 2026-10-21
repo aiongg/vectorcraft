@@ -33,6 +33,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 
+# Installed fonts for characters the UI's faces lack, at regular weight (desktop; the web has none).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+craft-ui = { workspace = true, features = ["system_fonts"] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # `now_ms` (src/lib.rs) reads the page's `performance.now()` with this crate in the web build. It is
 # MIT OR Apache-2.0 and already in the build through eframe.

@@ -931,7 +931,6 @@ fn only_picks_shows_the_hosts_dialogs() {
     for (file, code) in [
         ("lib.rs", "fnfile_dialog_open"),
         ("shortcut_editor.rs", "fnimport_into_dialog"),
-        ("ui_fonts.rs", "fnpainted_text"),
         ("place.rs", ".pick_open_multi.is_some()"),
         ("panels/separations.rs", "picks::open("),
     ] {

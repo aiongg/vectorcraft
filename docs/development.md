@@ -148,10 +148,13 @@ CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci   # also runs the Japanese-
   All other supplied faces follow those existing document fallbacks in manifest order, so they
   can also be selected by family name. This does not change which faces the web build embeds
   or fetches, and no craft-fonts faces are registered when the optional input is absent.
-- UI: `theme::install_fonts` adds them at the end of every egui family (BIZ UDPGothic first, then
-  Noto Sans Georgian for the Georgian interface), after the UI fonts and before the installed fonts
-  `ui_fonts.rs` discovers for other scripts. On the web, Noto Sans Georgian is fetched at startup
-  and reaches the UI through `ui_fonts.rs`.
+- UI: `theme::install_fonts` builds every egui family with craft-ui's `fonts::UiFonts` (craft-libs
+  `crates/ui` README, "UI fonts"): VectorCraft's own faces (Inter, Source Sans 3, JetBrains Mono)
+  first, then the craft-fonts faces for the interface language (the Han face of its region:
+  Traditional for `zh-hant`, Simplified for `zh-hans`, Japanese for `ja`, Korean for `ko`), then the
+  faces for every other script, then installed fonts at regular weight (desktop). It runs again
+  when the interface language changes. On the web, which has no installed fonts, the faces it
+  fetches at startup (Noto Sans Georgian, Arabic, Thai) take their place.
 - Tests that need Japanese or Georgian glyphs skip with a message when built without craft-fonts. The FreeBSD
   CI job and every release job (`release.yml`) check craft-fonts out at a pinned commit; release
   packages carry each embedded font's `OFL-<family>.txt`.
@@ -245,10 +248,10 @@ other `sv-*` locale resolve to it), Georgian (`ka`, complete; `ka-GE` and `ka_GE
   until they add `@msg` rows.
 - Not translated on purpose: names that are user data (layers, swatches, fonts, documents), the tab
   title's colour mode, command ids and parameter names inside messages. Not done yet: locale-aware number
-  and date formats, right-to-left layout. Chinese and Japanese UI text
-  is drawn with craft-fonts' BIZ UDPGothic when the build embeds it (see Fonts above), else with an installed
-  system font; the glyph test checks Latin and Cyrillic catalogs always and the CJK ones only with craft-fonts.
-  A Traditional Chinese UI font is still to be added to craft-fonts for the web build.
+  and date formats, right-to-left layout. Chinese, Japanese and Korean UI text
+  is drawn with the craft-fonts face for the language's region when the build embeds one (see Fonts above), else with an installed
+  system font; the glyph test (`ui_fonts_cover_the_catalogs`) runs with craft-fonts and checks each catalog whose scripts its faces cover.
+  The web build embeds only BIZ UDPGothic, so Traditional Chinese and Korean have no UI face there yet.
 
 ## Cursors
 
@@ -375,6 +378,7 @@ do not replace expected hashes automatically in response to a download mismatch.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-21 | minor | UI fonts: craft-ui's `fonts::UiFonts` stack with regional Han faces and installed fonts at regular weight (#2689). |
 | 2026-10-14 | minor | Document the `bundled-fonts` feature of vectorcraft-text and vectorcraft-engine (Fonts › Leaving out the bundled fonts). |
 | 2026-10-14 | minor | Document registration of every explicitly supplied craft-fonts face after the existing script-specific prefix; empty input and web selection remain unchanged. |
 | 2026-10-13 | minor | Document pinned PngSuite files, integrity checks and download budgets (#1729). |

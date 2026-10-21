@@ -1,8 +1,11 @@
 //! Design tokens (four UI brightness levels), fonts and egui style.
 
+#[cfg(target_arch = "wasm32")]
 use std::sync::Arc;
+use std::sync::OnceLock;
 
-use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Stroke, TextStyle, Visuals};
+use craft_ui::fonts::{CraftFace, Family, I18nScripts, Stack, SystemFonts, UiFonts};
+use egui::{Color32, CornerRadius, FontData, FontFamily, FontId, Stroke, TextStyle, Visuals};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -495,55 +498,92 @@ pub fn mono(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name(FONT_MONO.into()))
 }
 
-pub fn install_fonts(ctx: &egui::Context) {
-    let mut fonts = FontDefinitions::default();
-    let add = |f: &mut FontDefinitions, name: &str, bytes: &'static [u8]| {
-        f.font_data.insert(name.to_owned(), Arc::new(FontData::from_static(bytes)));
-    };
-    add(&mut fonts, "SourceSans3", include_bytes!("../../../assets/fonts/SourceSans3-Regular.ttf"));
+/// The craft-fonts faces this build embedded ([`vectorcraft_text::CRAFT_FONTS`]; empty unless built
+/// with `CRAFT_FONTS_DIR`), for the UI font stack. They share the bytes the document fonts use.
+pub(crate) fn craft_faces() -> &'static [CraftFace] {
+    static FACES: OnceLock<Vec<CraftFace>> = OnceLock::new();
+    FACES.get_or_init(|| {
+        vectorcraft_text::CRAFT_FONTS
+            .iter()
+            .map(|f| CraftFace { family: f.family, style: f.style, scripts: f.scripts, bytes: f.bytes, index: 0 })
+            .collect()
+    })
+}
+
+/// egui's own faces behind VectorCraft's in every UI family, as before the craft-fonts faces: the
+/// symbols and emoji the UI draws in plain text (★ ▸ ⌘) look the same on every machine.
+const EGUI_FACES: [&str; 4] = ["Ubuntu-Light", "egui-icons", "NotoEmoji-Regular", "emoji-icon-font"];
+
+/// The UI font stack for `lang` with the craft-fonts faces `craft`: Inter and Source Sans 3 (and
+/// their semibold faces, and JetBrains Mono), then the craft-fonts faces and installed fonts in the
+/// suite's order ([`craft_ui::fonts`]). Installed fonts are drawn at regular weight, not at a
+/// variable font's default instance (#2689: Thin).
+pub(crate) fn font_stack(lang: crate::i18n::Lang, craft: &[CraftFace], system: SystemFonts) -> Stack {
     // Inter is drawn a little smaller than its size: its letters are wider than Source Sans's, and
     // the panels are laid out for those.
-    let inter =
-        |bytes: &'static [u8]| Arc::new(FontData::from_static(bytes).tweak(egui::epaint::text::FontTweak { scale: 0.92, ..Default::default() }));
-    fonts.font_data.insert("Inter".to_owned(), inter(include_bytes!("../../../assets/fonts/Inter-Regular.ttf")));
-    fonts.font_data.insert("Inter-SemiBold".to_owned(), inter(include_bytes!("../../../assets/fonts/Inter-SemiBold.ttf")));
-    add(&mut fonts, "SourceSans3-Semibold", include_bytes!("../../../assets/fonts/SourceSans3-Semibold.ttf"));
-    add(&mut fonts, "JetBrainsMono", include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf"));
-    let fallback: Vec<String> = fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
-    let mut prop = vec!["Inter".to_string(), "SourceSans3".to_string()];
-    prop.extend(fallback.clone());
-    fonts.families.insert(FontFamily::Proportional, prop);
-    let mut semi = vec!["Inter-SemiBold".to_string(), "SourceSans3-Semibold".to_string()];
-    semi.extend(fallback.clone());
-    fonts.families.insert(FontFamily::Name(FONT_UI_SEMIBOLD.into()), semi);
-    let mut ui = vec!["Inter".to_string(), "SourceSans3".to_string()];
-    ui.extend(fallback.clone());
-    fonts.families.insert(FontFamily::Name(FONT_UI.into()), ui);
-    let mut mono = vec!["JetBrainsMono".to_string()];
-    mono.extend(fallback);
-    fonts.families.insert(FontFamily::Name(FONT_MONO.into()), mono);
-    add_craft_fonts(&mut fonts);
-    ctx.set_fonts(fonts);
+    let inter = |bytes: &'static [u8]| FontData::from_static(bytes).tweak(egui::epaint::text::FontTweak { scale: 0.92, ..Default::default() });
+    let (ui, semibold, mono) = (FontFamily::Name(FONT_UI.into()), FontFamily::Name(FONT_UI_SEMIBOLD.into()), FontFamily::Name(FONT_MONO.into()));
+    let text = [FontFamily::Proportional, ui.clone()];
+    let codes: Vec<&str> = crate::i18n::Lang::all().map(crate::i18n::Lang::code).collect();
+    let mut fonts = UiFonts::new(&I18nScripts)
+        .app_face("Inter", inter(include_bytes!("../../../assets/fonts/Inter-Regular.ttf")), &text)
+        .app_face("SourceSans3", FontData::from_static(include_bytes!("../../../assets/fonts/SourceSans3-Regular.ttf")), &text)
+        .app_face("Inter-SemiBold", inter(include_bytes!("../../../assets/fonts/Inter-SemiBold.ttf")), std::slice::from_ref(&semibold))
+        .app_face(
+            "SourceSans3-Semibold",
+            FontData::from_static(include_bytes!("../../../assets/fonts/SourceSans3-Semibold.ttf")),
+            std::slice::from_ref(&semibold),
+        )
+        .app_face(
+            "JetBrainsMono",
+            FontData::from_static(include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf")),
+            std::slice::from_ref(&mono),
+        )
+        .family(Family::named(FONT_UI_SEMIBOLD).weight(600))
+        .craft_faces(craft)
+        .languages(&codes)
+        .ui_language(lang.code())
+        .system_fonts(system);
+    for name in EGUI_FACES {
+        fonts = fonts.egui_face(name, &[FontFamily::Proportional, ui.clone(), semibold.clone(), mono.clone()]);
+    }
+    // The web has no installed fonts: the craft-fonts faces it fetches (`web-fonts.txt`) stand in.
+    #[cfg(target_arch = "wasm32")]
+    let fonts = fonts.system_provider(Arc::new(loaded_font));
+    let mut stack = fonts.stack();
+    // Numbers and code stay monospaced in every language, also where the UI language's own face
+    // leads the text families (Georgian).
+    if let Some(data) = stack.definitions.font_data.get("JetBrainsMono").map(|d| (**d).clone()) {
+        stack.insert(&mono, 0, "JetBrainsMono", data);
+    }
+    stack
 }
 
-/// The egui name of a craft-fonts face.
-pub(crate) fn craft_font_name(f: &vectorcraft_text::CraftFont) -> String {
-    format!("craft-fonts {} {}", f.family, f.style)
+/// Install the UI fonts for the language the UI is drawn in ([`crate::i18n::current`]). Call it
+/// again when that changes: the language's own faces lead the stack.
+pub fn install_fonts(ctx: &egui::Context) {
+    font_stack(crate::i18n::current(), craft_faces(), SystemFonts::AfterCraft).install(ctx);
 }
 
-/// The Japanese and Georgian craft-fonts faces (when built with `CRAFT_FONTS_DIR`) as fallbacks at
-/// the end of every family, after the app's own fonts and before the installed fonts `ui_fonts`
-/// adds: BIZ UDPGothic first (bold first in the semibold family), then the Mincho faces, then Noto
-/// Sans Georgian.
-fn add_craft_fonts(fonts: &mut FontDefinitions) {
-    for f in vectorcraft_text::CRAFT_FONTS.iter().filter(|f| f.is_japanese() || f.is_georgian()) {
-        fonts.font_data.insert(craft_font_name(f), Arc::new(FontData::from_static(f.bytes)));
-    }
-    for (family, stack) in fonts.families.iter_mut() {
-        let bold = *family == FontFamily::Name(FONT_UI_SEMIBOLD.into());
-        stack.extend(vectorcraft_text::craft_fonts::japanese_ui_fonts(bold).into_iter().map(craft_font_name));
-        stack.extend(vectorcraft_text::craft_fonts::georgian_ui_fonts().into_iter().map(craft_font_name));
-    }
+/// A face the document font database has loaded (the web's fetched craft-fonts faces) for a
+/// character the UI faces lack.
+#[cfg(target_arch = "wasm32")]
+fn loaded_font(request: &egui::epaint::text::FallbackRequest<'_>) -> Option<egui::epaint::text::FontInsert> {
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    use vectorcraft_text::{FontDb, FontFace};
+    // The faces' file data, shared with the font database (which keeps every face it loads for the
+    // session) instead of copied: one handle is kept per face.
+    static SHARED: Mutex<Option<HashMap<String, &'static FontFace>>> = Mutex::new(None);
+    let face = FontDb::global().face_covering(request.cluster.chars().next()?)?;
+    let name = format!("{} {} #{}", face.family, face.style, face.face_index());
+    let mut shared = SHARED.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let face: &'static FontFace = *shared.get_or_insert_with(HashMap::new).entry(name.clone()).or_insert_with(|| {
+        let leaked: &'static Arc<FontFace> = Box::leak(Box::new(face));
+        &**leaked
+    });
+    let data = FontData { index: face.face_index(), ..FontData::from_static(face.file_data()) };
+    Some(egui::epaint::text::FontInsert { name, data, families: Vec::new() })
 }
 
 /// Apply tokens to egui's global style.
@@ -609,6 +649,44 @@ mod tests {
             assert_eq!(Brightness::parse(b.label()), Some(b));
         }
         assert!(!Tokens::for_brightness(Brightness::Light).dark);
+    }
+
+    /// #2689: Han takes the face of the UI language's region (Traditional for `zh-hant`), and
+    /// Korean has a Hangul face, whatever order the craft-fonts manifest lists them in.
+    #[test]
+    fn cjk_interfaces_take_their_regional_faces() {
+        let face = |family, scripts| CraftFace { family, style: "Regular", scripts, bytes: &[], index: 0 };
+        let craft = [
+            face("Test JP", &["Jpan", "Latn"]),
+            face("Test SC", &["Hans", "Latn"]),
+            face("Test TC", &["Hant", "Latn"]),
+            face("Test HK", &["Hant-HK", "Latn"]),
+            face("Test KR", &["Kore", "Latn"]),
+        ];
+        for (code, want) in [("zh-hant", "Test TC Regular"), ("zh-hans", "Test SC Regular"), ("ja", "Test JP Regular"), ("ko", "Test KR Regular")] {
+            let lang = crate::i18n::Lang::from_code(code).unwrap();
+            for family in [FontFamily::Proportional, FontFamily::Name(FONT_UI_SEMIBOLD.into())] {
+                let stack = font_stack(lang, &craft, SystemFonts::Off);
+                let chain = stack.chain(&family);
+                assert_eq!(chain.first().map(String::as_str), Some(if family == FontFamily::Proportional { "Inter" } else { "Inter-SemiBold" }));
+                let first = chain.iter().find(|n| n.starts_with("Test "));
+                assert_eq!(first.map(String::as_str), Some(want), "{code} {family:?}: {chain:?}");
+            }
+        }
+        // With the craft-fonts faces this build embedded: a Traditional Chinese face draws Han in a
+        // Traditional Chinese UI, and a Korean UI has its Hangul.
+        let craft = craft_faces();
+        if !(craft.iter().any(|f| f.scripts.contains(&"Hant")) && craft.iter().any(|f| f.scripts.contains(&"Kore"))) {
+            eprintln!("skipped the embedded faces: no Traditional Chinese and Korean faces in this build's craft-fonts");
+            return;
+        }
+        let stack = font_stack(crate::i18n::Lang::from_code("zh-hant").unwrap(), craft, SystemFonts::Off);
+        let han = |f: &CraftFace| ["Jpan", "Hans", "Hant", "Hant-HK", "Kore"].iter().any(|t| f.scripts.contains(t));
+        let first = stack.chain(&FontFamily::Proportional).iter().find_map(|n| craft.iter().find(|f| f.name() == *n && han(f)));
+        assert!(first.is_some_and(|f| f.scripts.contains(&"Hant")), "{:?}", first.map(CraftFace::name));
+        let stack = font_stack(crate::i18n::Lang::from_code("ko").unwrap(), craft, SystemFonts::Off);
+        let mut fonts = stack.fonts(false);
+        assert!("로고 레이어".chars().filter(|c| !c.is_whitespace()).all(|c| fonts.has_glyph(&FontId::proportional(13.0), c)));
     }
 
     /// #1662: a slider's rail (`button_border`, see `widgets::slider`) stands out from the panel

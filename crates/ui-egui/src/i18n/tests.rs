@@ -274,51 +274,41 @@ fn is_cjk(c: char) -> bool {
     matches!(c as u32, 0x1100..=0x11FF | 0x3000..=0x9FFF | 0xAC00..=0xD7AF | 0xF900..=0xFAFF | 0xFF00..=0xFFEF | 0x20000..=0x2FFFF)
 }
 
-/// Georgian letters (Mkhedruli, Mtavruli, Asomtavruli): only craft-fonts' Noto Sans Georgian has them.
-fn is_georgian(c: char) -> bool {
-    matches!(c as u32, 0x10A0..=0x10FF | 0x1C90..=0x1CBF | 0x2D00..=0x2D2F)
-}
-
-/// The UI fonts draw every character the catalogs use, in every family the UI draws text with
-/// (the web build has no system fonts to fall back to). Chinese and Japanese characters come from
-/// the craft-fonts build input, which is optional: without it they are left to the installed
-/// fonts, and with it the Japanese catalog is checked against BIZ UDPGothic (the Traditional
-/// Chinese one waits for a Traditional Chinese UI font in craft-fonts). Georgian letters are the
-/// same: checked against Noto Sans Georgian when craft-fonts has it.
+/// The UI fonts draw every character the catalogs and the language names use, in every family the
+/// UI draws text with, without installed fonts (the web build has none). Latin, Cyrillic and Greek
+/// come from VectorCraft's own faces; Chinese, Japanese, Korean and Georgian need the craft-fonts
+/// build input (`CRAFT_FONTS_DIR`), so a language is checked once the craft-fonts faces have its
+/// scripts. Names in other scripts the craft-fonts faces carry are checked too.
 #[test]
-fn bundled_fonts_cover_the_catalogs() {
-    let japanese_ui_font = vectorcraft_text::CRAFT_FONTS.iter().any(|f| f.is_japanese());
-    let georgian_ui_font = vectorcraft_text::CRAFT_FONTS.iter().any(|f| f.is_georgian());
-    let ctx = egui::Context::default();
-    crate::theme::install_fonts(&ctx);
-    let mut output = ctx.run_ui(egui::RawInput::default(), |_| {});
-    output.textures_delta.clear();
-    let mut missing = std::collections::BTreeMap::new();
-    ctx.fonts_mut(|fonts| {
-        let families = [
-            egui::FontFamily::Proportional,
-            egui::FontFamily::Name(crate::theme::FONT_UI.into()),
-            egui::FontFamily::Name(crate::theme::FONT_UI_SEMIBOLD.into()),
-            egui::FontFamily::Name(crate::theme::FONT_MONO.into()),
-        ];
-        for l in LANGUAGES.iter().filter(|l| !l.source.is_empty()) {
-            let (entries, _) = parse_entries(l.source);
-            let cjk_checked = japanese_ui_font && l.code == "ja";
-            let chars: std::collections::BTreeSet<char> = entries
-                .iter()
-                .flat_map(|(_, _, tr)| tr.chars())
-                .filter(|c| !c.is_whitespace() && (cjk_checked || !is_cjk(*c)) && (georgian_ui_font || !is_georgian(*c)))
-                .collect();
-            for family in &families {
-                let font = egui::FontId::new(13.0, family.clone());
-                let gone: String = chars.iter().filter(|c| !fonts.has_glyph(&font, **c)).collect();
-                if !gone.is_empty() {
-                    missing.insert(format!("{} in {family:?}", l.code), gone);
-                }
-            }
+fn ui_fonts_cover_the_catalogs() {
+    use craft_ui::fonts::{Sample, SystemFonts, assert_covers, missing_glyphs};
+    let craft = crate::theme::craft_faces();
+    if craft.is_empty() {
+        eprintln!("skipped: built without craft-fonts (set CRAFT_FONTS_DIR to a craft-fonts checkout to run it)");
+        return;
+    }
+    let stack = crate::theme::font_stack(Lang::EN, craft, SystemFonts::Off);
+    let checked: Vec<Lang> = Lang::all().filter(|l| stack.covers_language(l.code(), false)).collect();
+    for code in ["en", "ja", "zh-hans", "ru", "el"] {
+        assert!(checked.iter().any(|l| l.code() == code), "{code} is checked");
+    }
+    let entries: Vec<(Lang, String, String)> =
+        checked.iter().flat_map(|l| parse_entries(l.0.source).0.into_iter().map(|(_, key, text)| (*l, key, text))).collect();
+    let mut samples: Vec<Sample<'_>> = entries.iter().map(|(l, key, text)| Sample { language: l.code(), key, text }).collect();
+    samples.extend(checked.iter().map(|l| Sample { language: l.code(), key: "language name", text: l.name() }));
+    // layer and file names in scripts the interface isn't translated to
+    for (script, text) in [("Arab", "طبقة الشعار"), ("Thai", "เลเยอร์โลโก้"), ("Geor", "ლოგოს ფენა"), ("Kore", "로고 레이어")]
+    {
+        if craft.iter().any(|f| f.scripts.contains(&script)) {
+            samples.push(Sample { language: script, key: "layer name", text });
         }
-    });
-    assert!(missing.is_empty(), "characters without a glyph: {missing:#?}");
+    }
+    assert!(samples.len() > 10_000, "{}", samples.len());
+    for family in [crate::theme::FONT_UI, crate::theme::FONT_UI_SEMIBOLD, crate::theme::FONT_MONO] {
+        let missing = missing_glyphs(&stack, &egui::FontFamily::Name(family.into()), samples.iter().copied(), false);
+        assert!(missing.is_empty(), "{family}: {} characters without a glyph, first {}", missing.len(), missing[0]);
+    }
+    assert_covers(&stack, samples);
 }
 
 /// The Traditional Chinese catalog holds no Simplified-only characters (a translation written
