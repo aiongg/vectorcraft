@@ -651,6 +651,9 @@ fn native_options(custom_titlebar: bool) -> eframe::NativeOptions {
             .with_title_shown(false)
             .with_icon(app_icon())
             .with_app_id("ai.storyteller.vectorcraft"),
+        // The UI font stack (`theme::install_fonts`, craft-ui's `Stack::install`) finds installed
+        // fonts itself.
+        system_font_fallback: false,
         #[cfg(feature = "windows7")]
         renderer: eframe::Renderer::Glow,
         ..Default::default()
