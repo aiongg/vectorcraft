@@ -578,10 +578,14 @@ pub(crate) fn font_stack(lang: crate::i18n::Lang, craft: &[CraftFace], system: S
     fonts.stack()
 }
 
-/// Install the UI fonts for the language the UI is drawn in ([`crate::i18n::current`]). Call it
-/// again when that changes: the language's own faces lead the stack.
+/// Install the UI fonts and the interface direction for the language the UI is drawn in
+/// ([`crate::i18n::current`]). Call it again when that changes: the language's own faces lead the
+/// stack. The direction follows the language's script, or `CRAFT_UI_DIRECTION=rtl` (egui's own
+/// chrome mirrors; VectorCraft's panels don't yet).
 pub fn install_fonts(ctx: &egui::Context) {
-    font_stack(crate::i18n::current(), craft_faces(), SystemFonts::AfterCraft).install(ctx);
+    let lang = crate::i18n::current();
+    font_stack(lang, craft_faces(), SystemFonts::AfterCraft).install(ctx);
+    craft_ui::direction::apply(ctx, craft_ui::direction::resolve(lang.code(), craft_ui::direction::Setting::Language));
 }
 
 /// A face the document font database has loaded (the web's fetched craft-fonts faces) for a
