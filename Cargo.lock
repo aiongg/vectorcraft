@@ -884,6 +884,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "craft-window"
+version = "0.1.0"
+source = "git+https://github.com/storytold/craft-libs?rev=1f805378d454dac48b5c214029d254055fdf961b#1f805378d454dac48b5c214029d254055fdf961b"
+dependencies = [
+ "wayland-client",
+]
+
+[[package]]
 name = "crc32fast"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4777,6 +4785,7 @@ dependencies = [
  "block2 0.6.2",
  "clipboard-win",
  "craft-print",
+ "craft-window",
  "eframe",
  "egui",
  "image",
@@ -5227,6 +5236,7 @@ dependencies = [
 name = "vectorcraft-ui-egui"
 version = "0.14.0"
 dependencies = [
+ "bytemuck",
  "craft-fonts-build",
  "craft-ui",
  "egui",
@@ -5234,6 +5244,7 @@ dependencies = [
  "egui_kittest",
  "image",
  "log",
+ "rustix 1.1.5",
  "serde",
  "serde_json",
  "toml",
