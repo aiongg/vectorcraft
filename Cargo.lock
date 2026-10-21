@@ -817,7 +817,7 @@ source = "git+https://github.com/storytold/craft-libs?rev=82a24b006eefa036b43c09
 [[package]]
 name = "craft-fonts-build"
 version = "0.1.0"
-source = "git+https://github.com/aiongg/craft-libs?rev=bcea5303b2ecbeb58211c95a5fb50ac1ccf9f70c#bcea5303b2ecbeb58211c95a5fb50ac1ccf9f70c"
+source = "git+https://github.com/aiongg/craft-libs?rev=607d38a0ddffe195467c4117937915c5ab9095af#607d38a0ddffe195467c4117937915c5ab9095af"
 dependencies = [
  "skera",
  "skrifa 0.48.0",
@@ -826,7 +826,7 @@ dependencies = [
 [[package]]
 name = "craft-i18n"
 version = "0.1.0"
-source = "git+https://github.com/aiongg/craft-libs?rev=bcea5303b2ecbeb58211c95a5fb50ac1ccf9f70c#bcea5303b2ecbeb58211c95a5fb50ac1ccf9f70c"
+source = "git+https://github.com/aiongg/craft-libs?rev=607d38a0ddffe195467c4117937915c5ab9095af#607d38a0ddffe195467c4117937915c5ab9095af"
 dependencies = [
  "fixed_decimal",
  "icu_decimal",
@@ -867,7 +867,7 @@ dependencies = [
 [[package]]
 name = "craft-ui"
 version = "0.1.0"
-source = "git+https://github.com/aiongg/craft-libs?rev=bcea5303b2ecbeb58211c95a5fb50ac1ccf9f70c#bcea5303b2ecbeb58211c95a5fb50ac1ccf9f70c"
+source = "git+https://github.com/aiongg/craft-libs?rev=607d38a0ddffe195467c4117937915c5ab9095af#607d38a0ddffe195467c4117937915c5ab9095af"
 dependencies = [
  "craft-fonts-build",
  "craft-i18n",
@@ -1047,7 +1047,7 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 [[package]]
 name = "ecolor"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "bytemuck",
  "emath",
@@ -1056,7 +1056,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1092,7 +1092,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "accesskit",
  "ahash",
@@ -1111,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "egui-wgpu"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1130,7 +1130,7 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "accesskit_winit",
  "arboard",
@@ -1153,7 +1153,7 @@ dependencies = [
 [[package]]
 name = "egui_extras"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "ahash",
  "egui",
@@ -1167,7 +1167,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "bytemuck",
  "egui",
@@ -1180,7 +1180,7 @@ dependencies = [
 [[package]]
 name = "egui_kittest"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "dify",
  "eframe",
@@ -1206,7 +1206,7 @@ checksum = "252afb9ae5eaa683babdc6a068b3f5726eb19e05070c731f9b2a23a7c3e8ed34"
 [[package]]
 name = "emath"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "bytemuck",
 ]
@@ -1261,7 +1261,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1287,7 +1287,7 @@ dependencies = [
 [[package]]
 name = "epaint_default_fonts"
 version = "0.37.0"
-source = "git+https://github.com/aiongg/egui?rev=23955535a2ad935208fccf9905c96d1b957482e9#23955535a2ad935208fccf9905c96d1b957482e9"
+source = "git+https://github.com/aiongg/egui?rev=a7bc087cf46779732dd59f4c0c3391e7bc34593c#a7bc087cf46779732dd59f4c0c3391e7bc34593c"
 
 [[package]]
 name = "equivalent"
@@ -6162,7 +6162,7 @@ checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
 [[package]]
 name = "winit"
 version = "0.30.13"
-source = "git+https://github.com/aiongg/winit?rev=5f3f0c68998edd3d069fc5bb009e14380edb90c1#5f3f0c68998edd3d069fc5bb009e14380edb90c1"
+source = "git+https://github.com/aiongg/winit?rev=8b35388bd719e8cc86a95971ba0bc026c9a8f058#8b35388bd719e8cc86a95971ba0bc026c9a8f058"
 dependencies = [
  "ahash",
  "android-activity",
@@ -6200,7 +6200,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "wayland-backend",
  "wayland-client",
- "wayland-cursor",
  "wayland-protocols",
  "wayland-protocols-plasma",
  "web-sys",
