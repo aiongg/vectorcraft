@@ -252,11 +252,44 @@ pub(crate) fn type_text(app: &mut VectorcraftApp, edits: Vec<Edit>) {
                 }
                 Ok(vec![])
             }
+            Edit::DeleteSurroundingBytes { before_bytes, after_bytes } => delete_surrounding(app, before_bytes, after_bytes, view),
             // `DeleteSurrounding` isn't sent by egui-winit (desktop); the web host has no IME
-            // path to the canvas yet.
-            _ => Ok(vec![]),
+            // path to the canvas yet. The clipboard is `route_type_input`'s, from the input.
+            Edit::DeleteSurrounding { .. } | Edit::Paste(_) | Edit::Copy | Edit::Cut => Ok(vec![]),
         };
     }
+}
+
+/// Delete the whole characters within `before_bytes` before and `after_bytes` after the Type tool's
+/// selection, as an input method replaces them with its next commit (macOS press-and-hold turns the
+/// held "e" into "è"). The deletion joins the typing session the commit continues: one undo step.
+fn delete_surrounding(
+    app: &mut VectorcraftApp,
+    before_bytes: usize,
+    after_bytes: usize,
+    view: vectorcraft_engine::ViewInfo,
+) -> vectorcraft_engine::Result<Vec<vectorcraft_engine::UiRequest>> {
+    let o = app.session.tool_options();
+    let (Some(id), Some(start), Some(end)) = (o["editing"].as_u64(), o["start"].as_u64(), o["end"].as_u64()) else {
+        return Ok(vec![]);
+    };
+    let text = match app.session.active().and_then(|d| d.doc.node(vectorcraft_doc::NodeId(id))).map(|n| &n.kind) {
+        Some(vectorcraft_doc::NodeKind::Text(t)) => t.plain_text(),
+        _ => return Ok(vec![]),
+    };
+    let end = usize::try_from(end).unwrap_or(usize::MAX).min(text.len());
+    let start = usize::try_from(start).unwrap_or(usize::MAX).min(end);
+    let (Some(before), Some(after)) = (text.get(..start), text.get(end..)) else {
+        return Ok(vec![]);
+    };
+    let (before_chars, after_chars) = craft_ui::ime::surrounding_chars(before, after, before_bytes, after_bytes);
+    if before_chars == 0 && after_chars == 0 {
+        return Ok(vec![]);
+    }
+    let from = start - before.chars().rev().take(before_chars).map(char::len_utf8).sum::<usize>();
+    let to = end + after.chars().take(after_chars).map(char::len_utf8).sum::<usize>();
+    app.session.set_tool_option("select", &json!({"start": from, "end": to}));
+    app.session.tool_key(ToolKey::Delete, Mods::default(), view)
 }
 
 pub fn handle(app: &mut VectorcraftApp, ctx: &egui::Context) {
@@ -802,6 +835,31 @@ mod tests {
             }
         }
         assert!(wrong.is_empty(), "{wrong:#?}");
+    }
+
+    /// macOS press-and-hold: the accent menu replaces the "é" before the caret with "ẽ" by deleting
+    /// bytes before the caret and committing the accented letter. Only characters wholly inside the
+    /// count go, the text after the caret stays, and one Undo takes back the replacement.
+    #[test]
+    fn ime_replaces_the_characters_before_the_caret_in_one_undo_step() {
+        let mut app = VectorcraftApp::new(vectorcraft_engine::Session::new(), Default::default());
+        app.session.execute("file.new", &json!({"width": 200, "height": 200})).unwrap();
+        let id = app.session.execute("text.create", &json!({"x": 20, "y": 50, "text": "Hẽé!"})).unwrap()["id"].as_u64().unwrap();
+        app.select_tool("type");
+        app.session.apply_actions(vec![vectorcraft_tools::Action::Notify("text.editNew".into())]).unwrap();
+        let caret = "Hẽé".len();
+        app.session.set_tool_option("select", &json!({"start": caret, "end": caret}));
+        assert!(app.session.tool_wants_text());
+        let ime = |e| egui::Event::Ime(e);
+        // Three bytes: all of "é" (two) and one of the three of the "ẽ" before it, which stays.
+        frame(
+            &mut app,
+            vec![ime(egui::ImeEvent::DeleteSurroundingBytes { before_bytes: 3, after_bytes: 0 }), ime(egui::ImeEvent::Commit("ẽ".into()))],
+        );
+        assert_eq!(text_and_layers(&mut app, id).0, "Hẽẽ!");
+        frame(&mut app, vec![egui::Event::Key { key: Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }]);
+        app.run("edit.undo", json!({})).unwrap();
+        assert_eq!(text_and_layers(&mut app, id).0, "Hẽé!");
     }
 
     /// Ctrl and Ctrl+Alt chords that type no text still run their commands while the Type tool
