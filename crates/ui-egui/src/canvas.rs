@@ -2598,17 +2598,19 @@ fn selection_overlay(app: &mut VectorcraftApp, p: &egui::Painter, xf: &Xf, curve
 
 /// While the Type tool edits, keep the system IME's candidate window under the caret.
 fn ime_output(app: &mut VectorcraftApp, ctx: &egui::Context, xf: &Xf) {
-    // The tool ended the composition itself (it kept the marked text): the IME must drop its copy.
-    if app.ime.is_composing() && !app.session.tool_composing() {
-        let _ = app.ime.end(ctx);
-        app.ime_discard = true;
+    // The tool ended the composition itself and kept the marked text: the IME must drop its copy.
+    if !app.session.tool_composing() {
+        app.ime.discard(ctx);
     }
-    if !app.session.tool_wants_text() {
+    let editing = app.session.tool_wants_text();
+    if !editing {
         // The editing ended in this pass, after the composer let the IME compose: it goes away
-        // now, not a frame later. A text field's own IME output is left alone.
-        if !ctx.text_edit_focused() {
-            ctx.output_mut(|o| o.ime = None);
-        }
+        // now, not a frame later.
+        let edits = app.ime.update(ctx, false);
+        crate::shortcuts::type_text(app, edits);
+    }
+    app.ime_discard |= app.ime.interrupted();
+    if !editing {
         return;
     }
     let Some((a, b)) = app.session.tool_ime_caret(app.view_info()) else { return };
@@ -7288,6 +7290,19 @@ mod tests {
         }
         typing_frame(&mut app, &ctx, vec![bs(true), bs(true), bs(true), txt("ế"), txt("n"), txt("g")]);
         assert_eq!(plain(&app, id), "việt tiếng");
+        // An Enter whose bare line break confirms the marked text breaks no line, and the host is
+        // told to drop the IME's copy. The next Enter, typed as a key and as text, breaks one.
+        let enter = |pressed| egui::Event::Key { key: egui::Key::Enter, physical_key: None, pressed, repeat: false, modifiers: Default::default() };
+        typing_frame(&mut app, &ctx, vec![preedit("が", 1)]);
+        typing_frame(&mut app, &ctx, vec![enter(true), egui::Event::Ime(egui::ImeEvent::Commit("\n".into())), enter(false)]);
+        assert!(!app.session.tool_composing() && !app.ime.is_composing());
+        assert_eq!(plain(&app, id), "việt tiếngが");
+        assert!(app.take_ime_discard());
+        for _ in 0..4 {
+            typing_frame(&mut app, &ctx, vec![]);
+        }
+        typing_frame(&mut app, &ctx, vec![enter(true), txt("\n"), enter(false)]);
+        assert_eq!(plain(&app, id).matches(['\n', '\r']).count(), 1, "{:?}", plain(&app, id));
     }
 
     #[test]

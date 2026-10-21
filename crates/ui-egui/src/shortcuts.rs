@@ -201,22 +201,16 @@ fn ime_update(app: &mut VectorcraftApp, ctx: &egui::Context) -> Vec<Edit> {
         && app.ui.screen_mode != 3
         && crate::scrub::phase(ctx) == crate::scrub::Phase::Idle
         && app.session.tool_ime_caret(view).is_some();
-    // A bare line break committed while composing confirms the marked text; the macOS input
-    // context can still hold it then.
-    let confirmed = app.ime.is_composing()
-        && ctx.input(|i| i.events.iter().any(|e| matches!(e, egui::Event::Ime(egui::ImeEvent::Commit(t)) if t == "\n" || t == "\r")));
     let edits = app.ime.update(ctx, editing);
-    let kept = !editing && !edits.is_empty();
-    // The composer ended the composition itself (a click away, the IME going away): the host also
-    // tells the macOS input context to drop it (see [`VectorcraftApp::take_ime_discard`]).
-    if kept || confirmed || ctx.output(|o| o.ime.is_some_and(|ime| ime.should_interrupt_composition)) {
-        app.ime_discard = true;
-    }
+    // The composer ended the composition itself (a click away, the IME going away, a line break
+    // confirming it): the host also tells the macOS input context to drop it (see
+    // [`VectorcraftApp::take_ime_discard`]).
+    app.ime_discard |= app.ime.interrupted();
     if editing {
         return edits;
     }
     if app.session.tool_composing() {
-        type_text(app, ctx, edits);
+        type_text(app, edits);
     }
     vec![]
 }
@@ -224,7 +218,7 @@ fn ime_update(app: &mut VectorcraftApp, ctx: &egui::Context) -> Vec<Edit> {
 /// The composer's edits to the Type tool, in order, so a keyboard-hook IME's Backspaces land between
 /// the right inserts (Vietnamese with UniKey). Clipboard events are left in the input for
 /// [`crate::panels::character::route_type_input`].
-fn type_text(app: &mut VectorcraftApp, ctx: &egui::Context, edits: Vec<Edit>) {
+pub(crate) fn type_text(app: &mut VectorcraftApp, edits: Vec<Edit>) {
     let view = app.view_info();
     for edit in edits {
         // Errors are already reported by the engine's interaction (a failed preview keeps it).
@@ -232,9 +226,7 @@ fn type_text(app: &mut VectorcraftApp, ctx: &egui::Context, edits: Vec<Edit>) {
             Edit::Preedit { text, active } => app.session.tool_preedit(&text, active, view),
             Edit::Insert(text) => app.session.tool_text(&text, view),
             // A line break sent as text or committed: a pressed Enter is the tool key's, in `handle`.
-            Edit::Key { key: Key::Enter, .. } if !ctx.input(|i| i.key_pressed(Key::Enter)) => {
-                app.session.tool_key(ToolKey::Enter, Mods::default(), view)
-            }
+            Edit::LineBreak { .. } => app.session.tool_key(ToolKey::Enter, Mods::default(), view),
             Edit::Key { key, modifiers, .. } => {
                 if let Some((k, m)) = crate::panels::character::editing_key(key, modifiers) {
                     crate::panels::character::text_key(app, k, m);
@@ -343,7 +335,7 @@ pub fn handle(app: &mut VectorcraftApp, ctx: &egui::Context) {
     }
     // Type tool editing: text, IME composition and editing keys go to the tool.
     if app.session.tool_wants_text() {
-        type_text(app, ctx, edits);
+        type_text(app, edits);
         // The clipboard and Bold/Italic (Cmd+A is Select All's, below: the text).
         crate::panels::character::route_type_input(app, ctx);
         // Enter was already delivered above as ToolKey::Enter (newline).
