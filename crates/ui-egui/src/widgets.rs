@@ -654,6 +654,47 @@ pub fn range_field(
     plain_field(ui, id, value.clamp(lo, hi), suffix, decimals, width).map(|v| round_to(v, places).clamp(lo, hi))
 }
 
+/// How the interface language writes and reads numbers (its digits and decimal mark), for
+/// [`locale_field`].
+pub(crate) fn ui_numbers() -> craft_ui::localized::LocaleNumbers {
+    thread_local! {
+        static NUMBERS: std::cell::RefCell<Option<(crate::i18n::Lang, craft_ui::localized::LocaleNumbers)>> = const { std::cell::RefCell::new(None) };
+    }
+    let lang = crate::i18n::current();
+    NUMBERS.with_borrow_mut(|cached| match cached {
+        Some((at, numbers)) if *at == lang => numbers.clone(),
+        _ => {
+            let numbers = numbers_for(lang);
+            *cached = Some((lang, numbers.clone()));
+            numbers
+        }
+    })
+}
+
+/// The numbers of `lang`, with the fields' error tooltips in it.
+pub(crate) fn numbers_for(lang: crate::i18n::Lang) -> craft_ui::localized::LocaleNumbers {
+    craft_ui::localized::LocaleNumbers::from_tag(lang.code()).with_messages(move |s| crate::i18n::tr(lang, s).to_owned())
+}
+
+/// A number kept within `range`, shown with at most `decimals` places in `numbers`' digits and
+/// decimal mark and read back the same way (`1,5` in German); ↑/↓ step it by a tenth, or by one
+/// with no decimals. Returns the new value when the user commits it.
+pub(crate) fn locale_field(
+    ui: &mut Ui,
+    id: impl std::hash::Hash + std::fmt::Debug,
+    value: f64,
+    range: std::ops::RangeInclusive<f64>,
+    decimals: usize,
+    width: f32,
+    numbers: &craft_ui::localized::LocaleNumbers,
+) -> Option<f64> {
+    let mut v = value;
+    let field =
+        craft_ui::localized::NumberField::new(&mut v, numbers).range(range).decimals(0..=decimals).step(if decimals == 0 { 1.0 } else { 0.1 });
+    let r = ui.add(field.desired_width(width).id_salt(id));
+    (r.changed() && v != value).then_some(v)
+}
+
 /// [`plain_field`] for a value the selected objects may not share: `None` shows a blank field.
 pub fn mixed_field(
     ui: &mut Ui,
