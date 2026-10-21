@@ -50,5 +50,7 @@ vectorcraft-text = { workspace = true, features = ["test-fonts"] }
 wat = { workspace = true }
 
 [build-dependencies]
+# The subsetter cuts the interface's CJK faces at build time; the app itself never links it.
+craft-fonts-build = { workspace = true, features = ["subset"] }
 serde_json = { workspace = true }
 toml = "1"

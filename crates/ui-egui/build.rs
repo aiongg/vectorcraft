@@ -7,12 +7,18 @@
 //!   JSON says the entry was verified (`people_entry`).
 //!
 //! A missing or malformed file gives empty tables (or no names) and a warning.
+//!
+//! It also writes `ui_fonts.rs`, the interface's CJK faces from the optional craft-fonts build
+//! input (`CRAFT_FONTS_DIR`, see crates/text/build.rs): craft-fonts' `role ui` faces, cut to the
+//! characters VectorCraft's catalogs use (craft-fonts-build `Embed::subset_to`). Its other faces
+//! the UI shares with the document fonts (`vectorcraft_text::CRAFT_FONTS`).
 
 use std::fmt::Write as _;
 
 use serde_json::Value;
 
 fn main() {
+    ui_fonts();
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contributors");
     let json = read(&dir.join("contributors.json"), "the About window shows no contributors", |t| {
         serde_json::from_str::<Value>(t).map_err(|e| e.to_string())
@@ -29,6 +35,25 @@ fn main() {
     }
     if let Err(e) = std::fs::write(&out, src) {
         println!("cargo::warning=writing {}: {e}", out.display());
+    }
+}
+
+fn ui_fonts() {
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let i18n = manifest_dir.join("src/i18n");
+    println!("cargo::rerun-if-changed={}", i18n.display());
+    let mut catalogs: Vec<std::path::PathBuf> =
+        std::fs::read_dir(&i18n).into_iter().flatten().flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "tsv")).collect();
+    catalogs.sort();
+    // The language names in the language menu (日本語, 繁體中文).
+    catalogs.push(i18n.join("mod.rs"));
+    let mut fonts = craft_fonts_build::Embed::new().filter(craft_fonts_build::ManifestEntry::is_ui).subset_to(catalogs);
+    // A relative CRAFT_FONTS_DIR is taken from the workspace root, as crates/text/build.rs does.
+    if let Some(dir) = std::env::var_os("CRAFT_FONTS_DIR").filter(|d| !d.is_empty()).map(std::path::PathBuf::from).filter(|d| d.is_relative()) {
+        fonts = fonts.dir(manifest_dir.join("../..").join(dir));
+    }
+    if let Err(e) = fonts.write("ui_fonts.rs") {
+        println!("cargo::error=interface fonts: {e}");
     }
 }
 

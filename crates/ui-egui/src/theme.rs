@@ -498,15 +498,34 @@ pub fn mono(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name(FONT_MONO.into()))
 }
 
-/// The craft-fonts faces this build embedded ([`vectorcraft_text::CRAFT_FONTS`]; empty unless built
-/// with `CRAFT_FONTS_DIR`), for the UI font stack. They share the bytes the document fonts use.
+/// The interface's CJK faces: craft-fonts' `role ui` faces, cut at build time to the characters
+/// the catalogs use (`build.rs`); empty unless built with `CRAFT_FONTS_DIR`.
+static UI_CJK_FACES: &[CraftFace] = {
+    #[allow(unused_imports, reason = "the table built without CRAFT_FONTS_DIR is empty")]
+    use CraftFace as EmbeddedFace;
+    include!(concat!(env!("OUT_DIR"), "/ui_fonts.rs"))
+};
+
+/// Whether a face draws Chinese, Japanese or Korean (script tags such as `Jpan` and `Hant-HK`).
+fn is_cjk(scripts: &[&str]) -> bool {
+    scripts.iter().any(|tag| matches!(tag.split('-').next(), Some("Hans" | "Hant" | "Jpan" | "Kore" | "Hani")))
+}
+
+/// The craft-fonts faces of the UI font stack: the cut CJK interface faces ([`UI_CJK_FACES`]), then
+/// the other faces of the document fonts ([`vectorcraft_text::CRAFT_FONTS`]), whose bytes they
+/// share. The full CJK document faces stay out: a character the cuts lack comes from the installed
+/// fonts. Empty unless built with `CRAFT_FONTS_DIR`.
 pub(crate) fn craft_faces() -> &'static [CraftFace] {
     static FACES: OnceLock<Vec<CraftFace>> = OnceLock::new();
     FACES.get_or_init(|| {
-        vectorcraft_text::CRAFT_FONTS
-            .iter()
-            .map(|f| CraftFace { family: f.family, style: f.style, scripts: f.scripts, bytes: f.bytes, index: 0 })
-            .collect()
+        let shared = vectorcraft_text::CRAFT_FONTS.iter().filter(|f| !is_cjk(f.scripts)).map(|f| CraftFace {
+            family: f.family,
+            style: f.style,
+            scripts: f.scripts,
+            bytes: f.bytes,
+            index: 0,
+        });
+        UI_CJK_FACES.iter().copied().chain(shared).collect()
     })
 }
 

@@ -1,7 +1,6 @@
 # Development
 
-> **Last updated:** 2026-10-14 · **Change:** leaving out the bundled fonts (`bundled-fonts` feature).
-> **Last updated:** 2026-10-14 · **Change:** document-font registration for all explicitly supplied faces.
+> **Last updated:** 2026-10-21 · **Change:** the interface CJK faces cut at build time to the catalogs.
 
 ## Web build
 
@@ -137,8 +136,9 @@ CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci   # also runs the Japanese-
   as a convenience, but CI and the docs always use absolute paths). Nothing is downloaded, and
   craft-fonts is never a `Cargo.toml` dependency. A bad path is a build warning, or an error with
   `CRAFT_FONTS_REQUIRED=1` (release builds).
-- Web (wasm32) builds embed only BIZ UDPGothic Regular (+4.7 MB of `.wasm`), to stay well under
-  static hosts' per-file limits (Cloudflare Pages: 25 MiB). Shippori Mincho, which this repo used to
+- Web (wasm32) builds embed only BIZ UDPGothic Regular (+4.7 MB of `.wasm`) for document text, and
+  the interface's cut CJK faces (+3.4 MB, see UI below), to stay well under static hosts' per-file
+  limits (Cloudflare Pages: 25 MiB). Shippori Mincho, which this repo used to
   embed everywhere, was 8.7 MB, so the web build is still smaller than before.
 - Document text: the Japanese faces join the font database after the bundled fonts (Mincho first),
   so they are the fallback for Japanese after the requested font; installed system fonts come after.
@@ -153,7 +153,12 @@ CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci   # also runs the Japanese-
   first, then the craft-fonts faces for the interface language (the Han face of its region:
   Traditional for `zh-hant`, Simplified for `zh-hans`, Japanese for `ja`, Korean for `ko`), then the
   faces for every other script, then installed fonts at regular weight (desktop). It runs again
-  when the interface language changes. On the web, which has no installed fonts, the faces it
+  when the interface language changes. The CJK faces are craft-fonts' interface faces (`role ui`:
+  Noto Sans SC, TC, HK and KR UI, BIZ UDPGothic Regular), which `crates/ui-egui/build.rs` cuts to
+  the characters of the catalogs in `crates/ui-egui/src/i18n` (craft-fonts-build `subset_to`;
+  about 3.4 MB for the five). The other faces are the document fonts' (`CRAFT_FONTS`), shared.
+  The full CJK document faces stay out of the UI: a character the cuts lack comes from the
+  installed fonts. `vectorcraft-cli` has no UI and links none of the cuts. On the web, which has no installed fonts, the faces it
   fetches at startup (Noto Sans Georgian, Arabic, Thai) take their place.
 - Tests that need Japanese or Georgian glyphs skip with a message when built without craft-fonts. The FreeBSD
   CI job and every release job (`release.yml`) check craft-fonts out at a pinned commit; release
@@ -378,6 +383,7 @@ do not replace expected hashes automatically in response to a download mismatch.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-21 | minor | UI fonts: the CJK interface faces cut at build time to the catalogs' characters. |
 | 2026-10-21 | minor | UI fonts: craft-ui's `fonts::UiFonts` stack with regional Han faces and installed fonts at regular weight (#2689). |
 | 2026-10-14 | minor | Document the `bundled-fonts` feature of vectorcraft-text and vectorcraft-engine (Fonts › Leaving out the bundled fonts). |
 | 2026-10-14 | minor | Document registration of every explicitly supplied craft-fonts face after the existing script-specific prefix; empty input and web selection remain unchanged. |
