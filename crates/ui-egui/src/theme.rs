@@ -559,6 +559,9 @@ pub(crate) fn font_stack(lang: crate::i18n::Lang, craft: &[CraftFace], system: S
             std::slice::from_ref(&mono),
         )
         .family(Family::named(FONT_UI_SEMIBOLD).weight(600))
+        // Numbers and code keep JetBrains Mono first in every language, also where the UI
+        // language's own face leads the text families (Georgian).
+        .family(Family::named(FONT_MONO).monospaced())
         .craft_faces(craft)
         .languages(&codes)
         .ui_language(lang.code())
@@ -569,13 +572,7 @@ pub(crate) fn font_stack(lang: crate::i18n::Lang, craft: &[CraftFace], system: S
     // The web has no installed fonts: the craft-fonts faces it fetches (`web-fonts.txt`) stand in.
     #[cfg(target_arch = "wasm32")]
     let fonts = fonts.system_provider(Arc::new(loaded_font));
-    let mut stack = fonts.stack();
-    // Numbers and code stay monospaced in every language, also where the UI language's own face
-    // leads the text families (Georgian).
-    if let Some(data) = stack.definitions.font_data.get("JetBrainsMono").map(|d| (**d).clone()) {
-        stack.insert(&mono, 0, "JetBrainsMono", data);
-    }
-    stack
+    fonts.stack()
 }
 
 /// Install the UI fonts for the language the UI is drawn in ([`crate::i18n::current`]). Call it
@@ -706,6 +703,16 @@ mod tests {
         let stack = font_stack(crate::i18n::Lang::from_code("ko").unwrap(), craft, SystemFonts::Off);
         let mut fonts = stack.fonts(false);
         assert!("로고 레이어".chars().filter(|c| !c.is_whitespace()).all(|c| fonts.has_glyph(&FontId::proportional(13.0), c)));
+    }
+
+    /// Code and numbers stay in JetBrains Mono where the UI language's own face leads the text
+    /// families (Georgian).
+    #[test]
+    fn mono_keeps_its_face_first_in_every_language() {
+        let craft = [CraftFace { family: "Test Georgian", style: "Regular", scripts: &["Geor"], bytes: &[], index: 0 }];
+        let stack = font_stack(crate::i18n::Lang::from_code("ka").unwrap(), &craft, SystemFonts::Off);
+        assert_eq!(stack.chain(&FontFamily::Proportional).first().map(String::as_str), Some("Test Georgian Regular"));
+        assert_eq!(stack.chain(&FontFamily::Name(FONT_MONO.into())).first().map(String::as_str), Some("JetBrainsMono"));
     }
 
     /// #1662: a slider's rail (`button_border`, see `widgets::slider`) stands out from the panel
