@@ -260,7 +260,7 @@ struct Cache {
 }
 
 fn cache_id() -> egui::Id {
-    egui::Id::new("save-for-web-previews")
+    egui::Id::unique("save-for-web-previews")
 }
 
 /// The texture of straight RGBA pixels.
@@ -395,7 +395,7 @@ fn preview_area(app: &mut VectorcraftApp, ui: &mut egui::Ui, d: &mut Dialog, set
     }
     ui.add_space(4.0);
     let (area, resp) = ui.allocate_exact_size(egui::vec2(PREVIEW_W, PREVIEW_H), egui::Sense::click_and_drag());
-    let pan_id = egui::Id::new("save-for-web-pan");
+    let pan_id = egui::Id::unique("save-for-web-pan");
     let mut pan: egui::Vec2 = ui.ctx().data(|m| m.get_temp(pan_id)).unwrap_or_default();
     if resp.dragged() {
         pan += resp.drag_delta();

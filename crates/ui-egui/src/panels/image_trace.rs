@@ -233,7 +233,7 @@ fn slider(ui: &mut Ui, label: &str, v: &mut f64, range: std::ops::RangeInclusive
         ui.visuals_mut().selection.bg_fill = t.accent;
         let r = ui.add(egui::Slider::new(v, range).suffix(suffix).integer().trailing_fill(true));
         if cfg!(test) {
-            ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new(("trace-slider", label)), r.rect));
+            ui.ctx().data_mut(|d| d.insert_temp(egui::Id::unique(("trace-slider", label)), r.rect));
         }
         out = (r.changed(), r.drag_stopped() || (r.changed() && !r.dragged()));
     });
@@ -608,7 +608,7 @@ mod tests {
         let ctx = egui::Context::default();
         crate::theme::install_fonts(&ctx);
         frame(&mut app, &ctx, vec![]);
-        let rail = ctx.data(|d| d.get_temp::<Rect>(egui::Id::new(("trace-slider", "Threshold")))).unwrap();
+        let rail = ctx.data(|d| d.get_temp::<Rect>(egui::Id::unique(("trace-slider", "Threshold")))).unwrap();
         let at = rail.left_center() + vec2(20.0, 0.0);
         assert_eq!(first_selected(&app).unwrap().children().unwrap().len(), 2, "source and ink path");
         for pressed in [true, false] {
@@ -637,7 +637,7 @@ mod tests {
         crate::theme::install_fonts(&ctx);
         for (label, key) in [("Threshold", "threshold"), ("Paths", "paths"), ("Corners", "corners"), ("Noise", "noise")] {
             frame(&mut app, &ctx, vec![]);
-            let rail = ctx.data(|d| d.get_temp::<Rect>(egui::Id::new(("trace-slider", label)))).unwrap();
+            let rail = ctx.data(|d| d.get_temp::<Rect>(egui::Id::unique(("trace-slider", label)))).unwrap();
             let at = rail.left_center() + vec2(20.0, 0.0);
             let press = |pressed| Event::PointerButton { pos: at, button: PointerButton::Primary, pressed, modifiers: Default::default() };
             let before = target(&app).2.unwrap()["params"][key].clone();

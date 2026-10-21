@@ -311,7 +311,7 @@ fn password_row(ui: &mut egui::Ui, d: &mut Dialog) {
 fn preview(app: &mut VectorcraftApp, ctx: &egui::Context, d: &Dialog, page: usize) -> Option<egui::TextureHandle> {
     let file = app.ui.dialog_file.clone()?;
     let crop = crop(d);
-    let key = egui::Id::new(("pdf-preview", file.token, page, crop.id()));
+    let key = egui::Id::unique(("pdf-preview", file.token, page, crop.id()));
     let opts = fileio::LoadOptions { crop, password: password(d), ..Default::default() };
     // A page that can't be read shows an empty preview (and isn't read again).
     preview_texture(app, ctx, key, &format!("pdf-preview-{page}"), PREVIEW, || {

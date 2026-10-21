@@ -128,7 +128,7 @@ pub(super) fn text(ui: &mut egui::Ui, d: &mut Dialog, key: &str, width: f32) -> 
 pub(super) fn text_edit(ui: &mut egui::Ui, d: &mut Dialog, key: &str, width: f32) -> egui::Response {
     let t = Tokens::get(ui.ctx());
     let mut s = d.str(key);
-    let id = ui.id().with(("dlg-text", key));
+    let id = ui.scope_id().with(("dlg-text", key));
     crate::widgets::take_dialog_focus(ui, id, &s);
     let r = egui::Frame::NONE
         .fill(t.input)
@@ -441,6 +441,7 @@ fn param_row(ui: &mut egui::Ui, d: &mut Dialog, k: &str, p: &Param) -> (bool, Op
     let t = Tokens::get(ui.ctx());
     let label = param_label(k, p);
     let shown_label = ui.label(egui::RichText::new(&label).color(t.text));
+    let label_id = shown_label.id;
     if let Some(help) = &p.ui.help {
         shown_label.on_hover_text(help);
     }
@@ -450,7 +451,7 @@ fn param_row(ui: &mut egui::Ui, d: &mut Dialog, k: &str, p: &Param) -> (bool, Op
     let mut opened = None;
     let new = ui
         .horizontal(|ui| {
-            let (new, in_field) = value_field(ui, k, &label, &p.spec, &cur, &suffix);
+            let (new, in_field) = ui.label_inputs_by(label_id, |ui| value_field(ui, k, &label, &p.spec, &cur, &suffix));
             if !in_field && !unit.is_empty() {
                 ui.label(egui::RichText::new(unit).color(t.text_dim));
             }
@@ -485,7 +486,7 @@ fn value_field(ui: &mut egui::Ui, k: &str, label: &str, spec: &ParamSpec, cur: &
                 (field.map(|x| json!(x as i64)), true)
             } else {
                 let shown = x.to_string();
-                crate::widgets::take_dialog_focus(ui, ui.id().with(("plugin-int", k)), &shown);
+                crate::widgets::take_dialog_focus(ui, ui.scope_id().with(("plugin-int", k)), &shown);
                 let typed = crate::widgets::text_field(ui, ("plugin-int", k), Some(&shown), 100.0, 1);
                 (typed.and_then(|text| text.parse::<i64>().ok()).map(|x| json!(x.clamp(*min, *max))), false)
             }

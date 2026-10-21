@@ -22,14 +22,14 @@ struct RootGroupDrag {
 }
 
 fn cancel_legacy_drag(app: &mut VectorcraftApp, ctx: &egui::Context) -> bool {
-    let key = egui::Id::new("vectorcraft-panel-docking").with("legacy-origin");
+    let key = egui::Id::unique("vectorcraft-panel-docking").with("legacy-origin");
     let previous = ctx.data_mut(|data| data.remove_temp::<LegacyDrag>(key));
     if let Some(previous) = previous {
         app.ui.open_panel = previous.open_panel;
         app.ui.floating_panels = previous.floating;
         app.ui.docking = previous.layout;
         app.ui.docking_icons = previous.icons;
-        craft_ui::docking::cancel_drag::<String>(ctx, egui::Id::new("vectorcraft-panel-docking"));
+        craft_ui::docking::cancel_drag::<String>(ctx, egui::Id::unique("vectorcraft-panel-docking"));
         true
     } else {
         false
@@ -540,13 +540,13 @@ impl craft_ui::docking::DockContent<String> for PanelContent<'_> {
                 self.commands.push(("window.panel.dock", json!({"panel": active, "group": true})));
             }
         } else {
-            let response = ui.interact(grip, ui.id().with("dock-group-bar"), egui::Sense::drag());
+            let response = ui.interact(grip, ui.scope_id().with("dock-group-bar"), egui::Sense::drag());
             if response.drag_started()
                 && let Some(pos) = response.interact_pointer_pos()
             {
                 ui.ctx().data_mut(|data| {
                     data.insert_temp(
-                        egui::Id::new("vectorcraft-root-group-drag"),
+                        egui::Id::unique("vectorcraft-root-group-drag"),
                         RootGroupDrag {
                             panel: active.clone(),
                             layout: self.app.ui.docking.clone().unwrap_or_else(|| legacy(self.app)),
@@ -563,7 +563,7 @@ impl craft_ui::docking::DockContent<String> for PanelContent<'_> {
 }
 
 pub(crate) fn show(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> bool {
-    let root_key = egui::Id::new("vectorcraft-root-group-drag");
+    let root_key = egui::Id::unique("vectorcraft-root-group-drag");
     if let Some(drag) = ui.ctx().data(|data| data.get_temp::<RootGroupDrag>(root_key)) {
         if drag.generation != app.ui.docking_generation {
             ui.ctx().data_mut(|data| data.remove::<RootGroupDrag>(root_key));
@@ -601,7 +601,7 @@ pub(crate) fn show(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> bool {
             }
         }
     }
-    let area = egui::Id::new("vectorcraft-panel-docking");
+    let area = egui::Id::unique("vectorcraft-panel-docking");
     let changed_workspace = ui.ctx().data_mut(|data| {
         let previous = data.get_temp::<u64>(area.with("generation"));
         data.insert_temp(area.with("generation"), app.ui.docking_generation);
@@ -766,7 +766,7 @@ pub(crate) fn show(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> bool {
         {
             return app.ui.docking.is_some();
         }
-        ui.ctx().data_mut(|data| data.remove::<LegacyDrag>(egui::Id::new("vectorcraft-panel-docking").with("legacy-origin")));
+        ui.ctx().data_mut(|data| data.remove::<LegacyDrag>(egui::Id::unique("vectorcraft-panel-docking").with("legacy-origin")));
     }
     for action in output.actions {
         if tab_drop
@@ -793,7 +793,7 @@ pub(crate) fn show(app: &mut VectorcraftApp, ui: &mut egui::Ui) -> bool {
         // Shared and native windows have already chosen their render ownership for this
         // frame. Switch representations only after both renderers finish, so a panel's
         // widgets never appear in two layers in the same frame.
-        ui.ctx().data_mut(|data| data.insert_temp(egui::Id::new("vectorcraft-native-panel-drop"), (command, params)));
+        ui.ctx().data_mut(|data| data.insert_temp(egui::Id::unique("vectorcraft-native-panel-drop"), (command, params)));
     }
     for group in &display.floating {
         if let Some(first) = group.panels.first()
@@ -832,7 +832,7 @@ fn icon_rail(app: &mut VectorcraftApp, ui: &mut egui::Ui) {
                             continue;
                         }
                         let (_, rect) = ui.allocate_space(egui::vec2(30.0, 30.0));
-                        let response = ui.interact(rect, ui.id().with(("panel-icon", id)), egui::Sense::click_and_drag());
+                        let response = ui.interact(rect, ui.scope_id().with(("panel-icon", id)), egui::Sense::click_and_drag());
                         let response = crate::widgets::paint_icon_button(ui, response, icon, tl!(label), app.ui.open_panel.as_deref() == Some(id));
                         if response.clicked() {
                             app.ui.open_panel = if app.ui.open_panel.as_deref() == Some(id) { None } else { Some(id.into()) };
@@ -852,7 +852,7 @@ fn icon_rail(app: &mut VectorcraftApp, ui: &mut egui::Ui) {
         };
         data.insert_temp(crate::floating::dock_rect_id(), dock.union(column));
         data.insert_temp(crate::floating::icons_rect_id(), column);
-        data.insert_temp(egui::Id::new("dock-icon-column-left"), column.left());
+        data.insert_temp(egui::Id::unique("dock-icon-column-left"), column.left());
     });
 }
 
@@ -890,11 +890,11 @@ pub(crate) fn legacy_tab(app: &mut VectorcraftApp, ui: &mut egui::Ui, panel: &st
             egui::vec2(bounds.width().clamp(240.0, 600.0), bounds.height().clamp(200.0, 600.0)),
         );
         if ensure(&mut layout, id).is_ok()
-            && craft_ui::docking::begin_drag(ui.ctx(), egui::Id::new("vectorcraft-panel-docking"), id.to_string(), source)
+            && craft_ui::docking::begin_drag(ui.ctx(), egui::Id::unique("vectorcraft-panel-docking"), id.to_string(), source)
         {
             ui.ctx().data_mut(|data| {
                 data.insert_temp(
-                    egui::Id::new("vectorcraft-panel-docking").with("legacy-origin"),
+                    egui::Id::unique("vectorcraft-panel-docking").with("legacy-origin"),
                     LegacyDrag {
                         layout: app.ui.docking.clone(),
                         open_panel: app.ui.open_panel.clone(),
@@ -1036,7 +1036,7 @@ mod tests;
 /// Commit a pointer drop after shared and native panel windows have finished rendering.
 pub(crate) fn finish_native_drop(app: &mut VectorcraftApp, ctx: &egui::Context) {
     if let Some((command, params)) =
-        ctx.data_mut(|data| data.remove_temp::<(&'static str, serde_json::Value)>(egui::Id::new("vectorcraft-native-panel-drop")))
+        ctx.data_mut(|data| data.remove_temp::<(&'static str, serde_json::Value)>(egui::Id::unique("vectorcraft-native-panel-drop")))
         && let Err(error) = app.run(command, params)
     {
         app.ui.status = error;

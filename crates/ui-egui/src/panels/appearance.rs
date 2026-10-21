@@ -194,7 +194,7 @@ fn row(ui: &mut Ui, selected: bool) -> (Rect, egui::Response) {
 fn eye(ui: &mut Ui, r: Rect, id: impl std::hash::Hash + std::fmt::Debug, on: bool, enabled: bool) -> bool {
     let t = Tokens::get(ui.ctx());
     let er = Rect::from_center_size(pos2(r.left() + EYE_W / 2.0, r.center().y), vec2(16.0, 16.0));
-    let resp = ui.interact(er, ui.id().with(id), if enabled { Sense::click() } else { Sense::hover() });
+    let resp = ui.interact(er, ui.scope_id().with(id), if enabled { Sense::click() } else { Sense::hover() });
     let col = if !enabled {
         t.text_disabled
     } else if resp.hovered() {
@@ -209,7 +209,7 @@ fn eye(ui: &mut Ui, r: Rect, id: impl std::hash::Hash + std::fmt::Debug, on: boo
 fn chevron(ui: &mut Ui, r: Rect, id: impl std::hash::Hash + std::fmt::Debug, open: bool) -> bool {
     let t = Tokens::get(ui.ctx());
     let cr = Rect::from_center_size(pos2(r.left() + EYE_W + 12.0, r.center().y), vec2(12.0, 12.0));
-    let resp = ui.interact(cr, ui.id().with(id), Sense::click());
+    let resp = ui.interact(cr, ui.scope_id().with(id), Sense::click());
     icons::paint(ui, if open { "chevron-down" } else { "chevron-right" }, cr, if resp.hovered() { t.text_strong } else { t.icon });
     resp.clicked()
 }
@@ -232,7 +232,7 @@ fn link(ui: &mut Ui, pos: egui::Pos2, id: impl std::hash::Hash + std::fmt::Debug
     let t = Tokens::get(ui.ctx());
     let galley = ui.painter().layout_no_wrap(s.to_string(), egui::FontId::proportional(12.5), t.text_strong);
     let r = Rect::from_min_size(pos2(pos.x, pos.y - galley.size().y / 2.0), galley.size());
-    let resp = ui.interact(r, ui.id().with(id), Sense::click());
+    let resp = ui.interact(r, ui.scope_id().with(id), Sense::click());
     ui.painter().galley(r.min, galley, t.text_strong);
     let mut x = r.left();
     while x < r.right() {
@@ -292,7 +292,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
 /// The object row's thumbnail drags this object's appearance onto art ([`PanelDrag::Appearance`];
 /// a chip of its fill follows the pointer).
 fn thumbnail_drag(ui: &mut Ui, th: Rect, id: NodeId) {
-    let resp = ui.interact(th, ui.id().with("ap-thumb"), Sense::drag()).on_hover_text(tl!("Drag onto art to apply this appearance"));
+    let resp = ui.interact(th, ui.scope_id().with("ap-thumb"), Sense::drag()).on_hover_text(tl!("Drag onto art to apply this appearance"));
     widgets::drag_source(ui, &resp, || PanelDrag::Appearance(id));
     if resp.dragged() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
@@ -441,7 +441,7 @@ fn stack(app: &mut VectorcraftApp, ui: &mut Ui, n: &Node, sel: Sel, object_row: 
         let cr = Rect::from_min_size(pos2(r.left() + EYE_W + 76.0, r.center().y - 9.0), vec2(18.0, 18.0));
         chip(ui, cr, paint);
         let cresp = ui
-            .interact(cr.expand(2.0), ui.id().with(("ap-chip", i)), Sense::click())
+            .interact(cr.expand(2.0), ui.scope_id().with(("ap-chip", i)), Sense::click())
             .on_hover_text(tl!("Click to choose a swatch, Shift-click to mix a colour"));
         let mixer = cresp.clicked() && ui.input(|inp| inp.modifiers.shift);
         if mixer {

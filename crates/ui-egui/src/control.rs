@@ -330,7 +330,13 @@ pub fn handle(app: &mut VectorcraftApp, ctx: &egui::Context, req: &ControlReques
             // Notches, not a flood: a turn stays within what a real wheel sends.
             let delta = egui::vec2(f("dx"), f("dy")).clamp(egui::Vec2::splat(-100.0), egui::Vec2::splat(100.0));
             app.synthetic.push(egui::Event::PointerMoved(egui::pos2(f("x"), f("y"))));
-            app.synthetic.push(egui::Event::MouseWheel { unit, delta, phase: egui::TouchPhase::Move, modifiers: modifiers(p) });
+            app.synthetic.push(egui::Event::MouseWheel {
+                unit,
+                delta,
+                phase: egui::TouchPhase::Move,
+                source: egui::MouseWheelSource::Unknown,
+                modifiers: modifiers(p),
+            });
             ctx.request_repaint();
             ok(Value::Null)
         }

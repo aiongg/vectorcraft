@@ -566,7 +566,7 @@ pub fn show(app: &mut VectorcraftApp, ctx: &egui::Context) {
             }
         }
     }
-    crate::dialogs::modal::show(ctx, tl!("Keyboard Shortcuts"), egui::Id::new("dialog-shortcuts"), -20.0, 20, |ui| {
+    crate::dialogs::modal::show(ctx, tl!("Keyboard Shortcuts"), egui::Id::unique("dialog-shortcuts"), -20.0, 20, |ui| {
         ui.set_width(640.0);
         crate::dialogs::modal::heading(ui, tl!("Keyboard Shortcuts"));
         ui.add_space(10.0);

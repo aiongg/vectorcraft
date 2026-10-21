@@ -417,8 +417,8 @@ fn new_original_chips(ui: &mut Ui, new: &Color, original: &Color) -> bool {
     widgets::paint_chip(ui, top, &Paint::solid(*new));
     widgets::paint_chip(ui, bottom, &Paint::solid(*original));
     ui.painter().rect_stroke(r, 0.0, egui::Stroke::new(1.0, t.border), egui::StrokeKind::Outside);
-    ui.interact(top, ui.id().with("cp-new"), Sense::hover()).on_hover_text(tl!("New"));
-    ui.interact(bottom, ui.id().with("cp-original"), Sense::click()).on_hover_text(tl!("Original: click to restore")).clicked()
+    ui.interact(top, ui.scope_id().with("cp-new"), Sense::hover()).on_hover_text(tl!("New"));
+    ui.interact(bottom, ui.scope_id().with("cp-original"), Sense::click()).on_hover_text(tl!("Original: click to restore")).clicked()
 }
 
 /// The HSB and RGB fields with the channel radios, hex, Lab and CMYK. Returns the edited colour
@@ -947,7 +947,7 @@ mod tests {
             assert!((last_input.bottom() - field.bottom()).abs() < 2.0, "{last_input:?} vs {field:?}");
             // Fonts and translated actions may leave one normal gutter, but never an unused column.
             assert!((last_input.right() - ok.right()).abs() < COLUMN_GAP, "no unused column beside the inputs: {last_input:?} vs {ok:?}");
-            let id = egui::Id::new(("dialog", KIND));
+            let id = egui::Id::unique(("dialog", KIND));
             let before = ctx.memory(|m| m.area_rect(id)).unwrap();
             assert!(drawn.boxes.iter().all(|r| r.left() >= before.left() - 1.0 && r.right() <= before.right() + 1.0), "controls fit horizontally");
             let title = drawn.text(tl!("Color Picker"));
@@ -1004,7 +1004,7 @@ mod tests {
         let (ctx, mut app) = (context(), app());
         app.run("ui.colorPicker", json!({"color":"#ffffff"})).unwrap();
         settled(&ctx, &mut app, screen());
-        let id = egui::Id::new(("dialog", KIND));
+        let id = egui::Id::unique(("dialog", KIND));
         let before = ctx.memory(|m| m.area_rect(id)).unwrap();
         app.ui.dialog.as_mut().unwrap().fields.insert("hex".into(), json!("0000FE"));
         let drawn = settled(&ctx, &mut app, screen());
@@ -1036,7 +1036,7 @@ mod tests {
         app.run("ui.colorPicker", json!({})).unwrap();
         let drawn = settled(&ctx, &mut app, screen());
         let title = drawn.text(tl!("Color Picker")).center();
-        let id = egui::Id::new(("dialog", KIND));
+        let id = egui::Id::unique(("dialog", KIND));
         let before = ctx.memory(|m| m.area_rect(id)).unwrap();
         let pointer = |pos, pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
         draw(&ctx, &mut app, screen(), vec![egui::Event::PointerMoved(title), pointer(title, true)]);
@@ -1092,7 +1092,7 @@ mod tests {
             let (ctx, mut app) = (context(), app());
             app.run("ui.colorPicker", json!({"color": "#0000ff"})).unwrap();
             let drawn = settled(&ctx, &mut app, size);
-            let outer = ctx.memory(|m| m.area_rect(egui::Id::new(("dialog", KIND)))).unwrap();
+            let outer = ctx.memory(|m| m.area_rect(egui::Id::unique(("dialog", KIND)))).unwrap();
             assert!(outer.width() <= size.x && outer.height() <= size.y, "{outer:?} in {size:?}");
             let field = drawn.fields.iter().max_by(|a, b| a.area().total_cmp(&b.area())).unwrap();
             assert!((MIN_FIELD..=FIELD).contains(&field.width()));
@@ -1113,6 +1113,7 @@ mod tests {
                                 unit: egui::MouseWheelUnit::Point,
                                 delta: vec2(0.0, -20.0),
                                 phase: egui::TouchPhase::Move,
+                                source: egui::MouseWheelSource::Unknown,
                                 modifiers: Default::default(),
                             },
                         ],

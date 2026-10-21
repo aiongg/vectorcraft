@@ -301,7 +301,7 @@ fn the_menus_paste_into_a_field_waits_for_the_formats() {
     run(&mut app, "edit.copy", json!({}));
     let hold = hold_worker(&mut app, "Saving a.vectorcraft");
     // A text field with the keyboard; in the second frame Paste is chosen from the menu.
-    let (ctx, id, mut field) = (egui::Context::default(), egui::Id::new("field"), String::new());
+    let (ctx, id, mut field) = (egui::Context::default(), egui::Id::unique("field"), String::new());
     for paste in [false, true] {
         let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
             if paste {

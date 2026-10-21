@@ -238,9 +238,9 @@ pub fn panel_menu_items(app: &mut VectorcraftApp, ui: &mut Ui, id: &str) -> bool
 /// The ≡ panel-menu button drawn into `rect` (the right end of a panel's title/tab strip).
 pub fn panel_menu(app: &mut VectorcraftApp, ui: &mut Ui, id: &str, rect: Rect) {
     let t = Tokens::get(ui.ctx());
-    let resp = ui.interact(rect, ui.id().with(("panel-menu", id)), Sense::click());
+    let resp = ui.interact(rect, ui.scope_id().with(("panel-menu", id)), Sense::click());
     icons::paint(ui, "menu", rect.shrink(1.0), if resp.hovered() { t.text_strong } else { t.text_dim });
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), tl!("Panel menu")));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), tl!("Panel menu")));
     let resp = resp.on_hover_text(tl!("Panel menu"));
     egui::Popup::menu(&resp).show(|ui| {
         crate::widgets::menu_scroll(ui, |ui| {
@@ -456,10 +456,10 @@ pub(crate) fn live_run(app: &mut VectorcraftApp, label: &str, cmd: &str, params:
 
 /// Per-panel UI state kept in egui memory (not document state).
 pub(crate) fn pstate<T: Clone + Default + Send + Sync + 'static>(ctx: &egui::Context, key: &str) -> T {
-    ctx.data(|d| d.get_temp::<T>(egui::Id::new(("panel-state", key)))).unwrap_or_default()
+    ctx.data(|d| d.get_temp::<T>(egui::Id::unique(("panel-state", key)))).unwrap_or_default()
 }
 pub(crate) fn set_pstate<T: Clone + Send + Sync + 'static>(ctx: &egui::Context, key: &str, v: T) {
-    ctx.data_mut(|d| d.insert_temp(egui::Id::new(("panel-state", key)), v));
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique(("panel-state", key)), v));
 }
 
 /// [`crate::i18n::label_or_name`] in the UI language.
@@ -480,7 +480,7 @@ pub(crate) fn recent_colors_row(app: &VectorcraftApp, ui: &mut Ui) -> Option<Col
         if cell.right() > r.right() - 2.0 {
             break;
         }
-        let resp = ui.interact(cell, ui.id().with(("recent", i)), Sense::click());
+        let resp = ui.interact(cell, ui.scope_id().with(("recent", i)), Sense::click());
         crate::widgets::swatch_tile(ui, cell, &Paint::solid(*c), false, resp.hovered());
         if resp.on_hover_text(c.to_hex()).clicked() {
             chosen = Some(*c);

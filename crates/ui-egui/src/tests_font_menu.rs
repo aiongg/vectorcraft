@@ -360,6 +360,7 @@ fn the_search_field_stays_put_while_the_list_scrolls() {
         let wheel = egui::Event::MouseWheel {
             unit: egui::MouseWheelUnit::Point,
             delta: egui::vec2(0.0, dy),
+            source: egui::MouseWheelSource::Unknown,
             modifiers: Default::default(),
             phase: egui::TouchPhase::Move,
         };

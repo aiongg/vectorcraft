@@ -218,7 +218,9 @@ fn body(app: &mut VectorcraftApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             }
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if let Some(i) = widgets::dropdown(ui, "recolor-preset", PRESETS[preset_of(d)], &PRESETS, 130.0) {
+            if let Some(i) = ui.name_inputs(tl!("Preset:").trim_end_matches(':'), |ui| {
+                widgets::dropdown(ui, "recolor-preset", PRESETS[preset_of(d)], &PRESETS, 130.0)
+            }) {
                 set_preset(app, d, i);
             }
             ui.label(egui::RichText::new(tl!("Preset:")).color(t.text_dim));
@@ -298,11 +300,11 @@ fn assign_tab(app: &mut VectorcraftApp, ui: &mut Ui, d: &mut Dialog, rows: &mut 
     // Reduction and the preserve rules apply to art (a colour group alone has a row per colour).
     if d.bool("__art") {
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new(tl!("Colors:")).color(t.text_dim));
+            let label = ui.label(egui::RichText::new(tl!("Colors:")).color(t.text_dim)).id;
             let labels: Vec<String> = std::iter::once(tl!("Auto").to_string()).chain((1..=total).map(|n| n.to_string())).collect();
             let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
             let cur = d.fields.get("colors").and_then(Value::as_u64).map_or(tl!("Auto").to_string(), |n| n.to_string());
-            if let Some(i) = widgets::dropdown(ui, "recolor-count", &cur, &refs, 70.0) {
+            if let Some(i) = ui.label_inputs_by(label, |ui| widgets::dropdown(ui, "recolor-count", &cur, &refs, 70.0)) {
                 d.fields.insert("colors".into(), if i == 0 { Value::Null } else { json!(i) });
             }
             ui.add_space(18.0);
@@ -427,14 +429,14 @@ fn assign_tab(app: &mut VectorcraftApp, ui: &mut Ui, d: &mut Dialog, rows: &mut 
     });
     ui.add_space(8.0);
     egui::Grid::new("recolor-options").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
-        ui.label(egui::RichText::new(tl!("Method:")).color(t.text_dim));
+        let label = ui.label(egui::RichText::new(tl!("Method:")).color(t.text_dim)).id;
         let m = Method::parse(&d.str("method")).unwrap_or_default();
         let labels: Vec<&str> = Method::ALL.iter().map(|m| m.label()).collect();
-        if let Some(i) = widgets::dropdown(ui, "recolor-method", m.label(), &labels, 180.0) {
+        if let Some(i) = ui.label_inputs_by(label, |ui| widgets::dropdown(ui, "recolor-method", m.label(), &labels, 180.0)) {
             d.fields.insert("method".into(), json!(Method::ALL[i].id()));
         }
         ui.end_row();
-        ui.label(egui::RichText::new(tl!("Limit to Library:")).color(t.text_dim));
+        let label = ui.label(egui::RichText::new(tl!("Limit to Library:")).color(t.text_dim)).id;
         // None, the document's swatches, then the colour libraries: the built-in ones (at the top
         // level of the library menu) translated, those the user saved or loaded by their names.
         let libs = colour_libraries(app);
@@ -446,7 +448,9 @@ fn assign_tab(app: &mut VectorcraftApp, ui: &mut Ui, d: &mut Dialog, rows: &mut 
         let at = keys.iter().position(|k| *k == cur).unwrap_or(0);
         let current = shown.get(at).copied().unwrap_or_default();
         ui.horizontal(|ui| {
-            if let Some(k) = widgets::dropdown_names(ui, "recolor-library", current, &shown, 180.0).and_then(|i| keys.get(i)) {
+            if let Some(k) =
+                ui.label_inputs_by(label, |ui| widgets::dropdown_names(ui, "recolor-library", current, &shown, 180.0)).and_then(|i| keys.get(i))
+            {
                 d.fields.insert("limitTo".into(), json!(k));
             }
             // Import a library (.ase, .acb, .gpl, .vcswatches or a document's swatches) and limit to it.
@@ -548,11 +552,11 @@ fn edit_tab(ui: &mut Ui, d: &mut Dialog, rows: &mut [Value]) -> bool {
     let active = active_rows(rows);
     let base = selection(d).into_iter().find(|i| active.contains(i)).or(active.first().copied());
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(tl!("Harmony Rules:")).color(t.text_dim));
+        let label = ui.label(egui::RichText::new(tl!("Harmony Rules:")).color(t.text_dim)).id;
         let rule = Harmony::parse(&d.str("rule")).unwrap_or(Harmony::Complementary);
         let labels: Vec<&str> = Harmony::ALL.iter().map(|h| h.label()).collect();
         // Choosing a rule gives the new colours its colours, from the base colour.
-        if let Some(i) = widgets::dropdown(ui, "recolor-rule", rule.label(), &labels, 170.0) {
+        if let Some(i) = ui.label_inputs_by(label, |ui| widgets::dropdown(ui, "recolor-rule", rule.label(), &labels, 170.0)) {
             d.fields.insert("rule".into(), json!(Harmony::ALL[i].id()));
             if let Some((b, c)) = base.and_then(|b| Some((b, to_color(&rows[b])?))) {
                 apply_rule(rows, Harmony::ALL[i], b, c, &active);

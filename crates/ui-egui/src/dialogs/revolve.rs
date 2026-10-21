@@ -40,8 +40,8 @@ pub(super) fn body(app: &VectorcraftApp, ui: &mut egui::Ui, d: &mut Dialog) {
                 m.iter().any(|(k, v)| v.as_f64().map_or_else(|| d.fields.get(k) != Some(v), |default| (d.f64(k, default) - default).abs() > 1e-6))
             });
             let (r, _) = ui.allocate_exact_size(vec2(88.0, 24.0), Sense::hover());
-            let response = ui.interact(r, Id::new("revolve-reset-all"), Sense::click());
-            response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), tl!("Reset all")));
+            let response = ui.interact(r, Id::unique("revolve-reset-all"), Sense::click());
+            response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), tl!("Reset all")));
             if response.hovered() {
                 ui.painter().rect_filled(r, 3.0, t.hover);
             }
@@ -452,7 +452,7 @@ fn label(ui: &mut egui::Ui, name: &str) {
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(vec2(LABEL_W, 24.0), Sense::hover());
     ui.put(r, egui::Label::new(egui::RichText::new(name).size(12.5).color(t.text)).halign(egui::Align::Min).truncate()).on_hover_text(name);
-    scrub::note_label(ui, r);
+    scrub::note_label(ui, r, name);
 }
 
 fn rail_width(ui: &egui::Ui) -> f32 {
@@ -549,8 +549,8 @@ fn dot(ui: &egui::Ui, p: Pos2, changed: bool) {
 
 fn reset_dot(ui: &mut egui::Ui, key: &str, changed: bool, default: &str) -> bool {
     let (r, _) = ui.allocate_exact_size(vec2(24.0, 24.0), Sense::hover());
-    let response = ui.interact(r, Id::new(("revolve-reset", key)), Sense::click());
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), tl!("Reset to default")));
+    let response = ui.interact(r, Id::unique(("revolve-reset", key)), Sense::click());
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), tl!("Reset to default")));
     if response.hovered() {
         ui.painter().rect_filled(r, 3.0, Tokens::get(ui.ctx()).hover);
     }

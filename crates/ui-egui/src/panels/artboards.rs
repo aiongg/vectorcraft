@@ -352,7 +352,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
                 );
                 let name_rect = egui::Rect::from_min_max(pos2(r.left() + 32.0, r.top() + 2.0), pos2(r.right() - 28.0, r.bottom() - 2.0));
                 if editing == Some(i) {
-                    let id = ui.id().with(("ab-name", i));
+                    let id = ui.scope_id().with(("ab-name", i));
                     let mut buf: String = ui.data_mut(|d| d.get_temp::<String>(id)).unwrap_or_else(|| name.clone());
                     let kept = widgets::own_field_shift_enter(ui, id, &mut buf, name);
                     let te = ui.put(name_rect, egui::TextEdit::singleline(&mut buf).id(id).font(egui::FontId::proportional(12.0)));
@@ -374,7 +374,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
                     ui.painter().text(name_rect.left_center(), egui::Align2::LEFT_CENTER, name, egui::FontId::proportional(12.5), t.text);
                 }
                 let opt = egui::Rect::from_center_size(r.right_center() - vec2(14.0, 0.0), vec2(14.0, 14.0));
-                let oresp = ui.interact(opt, ui.id().with(("ab-opt", i)), Sense::click());
+                let oresp = ui.interact(opt, ui.scope_id().with(("ab-opt", i)), Sense::click());
                 icons::paint(ui, "dc-artboard-options", opt, if oresp.hovered() { t.text_strong } else { t.icon });
                 let oresp = oresp.on_hover_text(tl!("Artboard Options"));
                 // A click on the active artboard's icon opens its Artboard Options. A click on
@@ -1047,7 +1047,7 @@ mod tests {
             .collect();
         let top_left = points.iter().min_by(|a, b| (a.top(), a.left()).partial_cmp(&(b.top(), b.left())).unwrap()).unwrap();
         bar_click(&mut app, &ctx, top_left.center());
-        assert_eq!(ctx.data(|d| d.get_temp::<usize>(egui::Id::new("refpt"))), Some(0), "the shared reference point is the top-left one");
+        assert_eq!(ctx.data(|d| d.get_temp::<usize>(egui::Id::unique("refpt"))), Some(0), "the shared reference point is the top-left one");
         let w = text_rect(&bar_texts(&mut app, &ctx), "W:");
         bar_type(&mut app, &ctx, egui::pos2(w.right() + 40.0, w.center().y), "300");
         want[1] = vectorcraft_geom::Rect::new(b.x0, b.y0, b.x0 + 300.0, b.y1);

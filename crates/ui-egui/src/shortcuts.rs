@@ -584,7 +584,7 @@ const ESCAPE_PAIR_SECONDS: f64 = 1.0;
 
 /// The key of the last counted Escape's time in egui's temporary data.
 fn escape_pair_id() -> egui::Id {
-    egui::Id::new("escape-pair")
+    egui::Id::unique("escape-pair")
 }
 
 /// Reads this frame's presses for Escape pressed twice. `None` when the frame has no Escape press, or

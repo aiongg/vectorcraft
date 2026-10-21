@@ -188,7 +188,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
     let rows = chars.len().div_ceil(cols);
     let px = (cell * ui.ctx().pixels_per_point()).round().clamp(8.0, 256.0) as u32;
     let list_h = (ui.available_height() - 64.0).max(cell * 3.0);
-    let hover_id = egui::Id::new("gl-hover");
+    let hover_id = egui::Id::unique("gl-hover");
     egui::ScrollArea::vertical().max_height(list_h).auto_shrink([false, false]).show_rows(ui, cell, rows, |ui, range| {
         for r in range {
             ui.horizontal(|ui| {
@@ -262,7 +262,7 @@ fn zoom_button(ui: &mut Ui, id: &str, label: &str, tip: &str, enabled: bool) -> 
     let t = Tokens::get(ui.ctx());
     let (rect, _) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::hover());
     let sense = if enabled { Sense::click() } else { Sense::hover() };
-    let resp = ui.interact(rect, ui.id().with(("gl-zoom", id)), sense);
+    let resp = ui.interact(rect, ui.scope_id().with(("gl-zoom", id)), sense);
     let bg = if enabled && resp.hovered() { t.hover } else { Color32::TRANSPARENT };
     ui.painter().rect_filled(rect, 2, bg);
     let border = if enabled { t.button_border } else { t.border };

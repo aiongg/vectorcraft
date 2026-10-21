@@ -522,7 +522,7 @@ enum SpectrumHit {
 fn spectrum(ui: &mut Ui, mode: Mode, size: egui::Vec2) -> Option<SpectrumHit> {
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(size, Sense::hover());
-    let resp = ui.interact(r, ui.id().with("color-spectrum"), Sense::click_and_drag());
+    let resp = ui.interact(r, ui.scope_id().with("color-spectrum"), Sense::click_and_drag());
     ui.painter().add(widgets::color_mesh(r, (72, 12), &|x, y| to32(&spectrum_at(mode, x, y))));
     ui.painter().rect_stroke(r, 0.0, Stroke::new(1.0, t.border), StrokeKind::Outside);
     if let Some(p) = resp.hover_pos() {
@@ -779,7 +779,7 @@ mod tests {
         let input = egui::RawInput { events, ..Default::default() };
         let mut full = ctx.run_ui(input, |ui| {
             show(app, ui);
-            out = (ctx.read_response(ui.id().with(&id)).map(|r| r.rect), ui.min_rect().height());
+            out = (ctx.read_response(ui.scope_id().with(&id)).map(|r| r.rect), ui.min_rect().height());
         });
         full.textures_delta.clear();
         out
@@ -1047,7 +1047,7 @@ mod tests {
             let mut rect = None;
             let mut out = ctx.run_ui(input, |ui| {
                 crate::panels::proxy(app, ui, 40.0);
-                rect = ctx.read_response(ui.id().with("stroke-proxy")).map(|r| r.rect);
+                rect = ctx.read_response(ui.scope_id().with("stroke-proxy")).map(|r| r.rect);
             });
             out.textures_delta.clear();
             rect

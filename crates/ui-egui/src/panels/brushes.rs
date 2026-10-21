@@ -203,7 +203,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
         ui.min_rect()
     });
     // Art dragged off the canvas and dropped on the list becomes an Art brush, as New Brush makes.
-    let zone = ui.interact(list_rect, ui.id().with("brushes-drop"), Sense::hover());
+    let zone = ui.interact(list_rect, ui.scope_id().with("brushes-drop"), Sense::hover());
     if let Some(ids) = widgets::art_drop(ui, &zone)
         && let Err(e) = app.run("brush.new", json!({ "type": "art", "ids": ids }))
     {

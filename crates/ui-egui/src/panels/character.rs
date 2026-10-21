@@ -447,7 +447,7 @@ fn cell(ui: &mut Ui, label: &str, tip: &str, add: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         let l =
             ui.add_sized(vec2(22.0, 24.0), egui::Label::new(egui::RichText::new(label).size(11.5).strong().color(t.text))).on_hover_text(tl!(tip));
-        crate::scrub::note_label(ui, l.rect);
+        crate::scrub::note_label(ui, l.rect, tl!(tip));
         add(ui);
     });
 }
@@ -567,7 +567,7 @@ pub(crate) fn axis_sliders(app: &mut VectorcraftApp, ui: &mut Ui, face: &vectorc
         let (min, max) = (f64::from(axis.min.min(axis.max)), f64::from(axis.max.max(axis.min)));
         ui.horizontal(|ui| {
             let label = widgets::dim_name(ui, &axis.name);
-            crate::scrub::note_label(ui, label.rect);
+            crate::scrub::note_label(ui, label.rect, &axis.name);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if let Some(v) = widgets::spin_plain(ui, ("ch-axis-field", axis.tag), value, "", 1, 72.0, 1.0, min, &[]) {
                     axes_cmd(app, json!({ &tag: v.clamp(min, max) }), widgets::Live::Released);
@@ -971,7 +971,7 @@ mod tests {
             let input = egui::RawInput { events, ..Default::default() };
             ctx.run_ui(input, |ui| {
                 axis_sliders(app, ui, &face);
-                slider = ctx.read_response(ui.id().with(("ch-axis", *b"wght"))).map(|r| r.rect);
+                slider = ctx.read_response(ui.scope_id().with(("ch-axis", *b"wght"))).map(|r| r.rect);
             })
             .textures_delta
             .clear();

@@ -125,7 +125,7 @@ mod tests {
         out.shapes
             .iter()
             .filter_map(|c| match &c.shape {
-                egui::Shape::Text(t) if t.galley.text() != "⚠" => Some(t.galley.text().to_string()),
+                egui::Shape::Text(t) if !t.galley.text().starts_with('⚠') => Some(t.galley.text().to_string()),
                 _ => None,
             })
             .collect()

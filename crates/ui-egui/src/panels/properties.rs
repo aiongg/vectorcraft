@@ -448,14 +448,14 @@ pub fn transform_section(app: &mut VectorcraftApp, ui: &mut Ui) {
         return;
     };
     let b = bx.rect;
-    let refi: usize = ui.data(|d| d.get_temp(egui::Id::new("refpt"))).unwrap_or(4);
+    let refi: usize = ui.data(|d| d.get_temp(egui::Id::unique("refpt"))).unwrap_or(4);
     let rp = bx.reference_point(refi);
     let copy = super::transform::alt_enter_copies(app, ui);
     section_header(ui, tl!("Transform"));
     let fw = super::field_width(ui);
     ui.horizontal(|ui| {
         if let Some(i) = widgets::reference_point(ui, refi) {
-            ui.data_mut(|d| d.insert_temp(egui::Id::new("refpt"), i));
+            ui.data_mut(|d| d.insert_temp(egui::Id::unique("refpt"), i));
         }
         ui.add_space(6.0);
         let link = super::transform::proportional(app, ui);
@@ -484,7 +484,7 @@ pub fn transform_section(app: &mut VectorcraftApp, ui: &mut Ui) {
     let fw = super::field_width(ui);
     ui.horizontal(|ui| {
         let icon = icons::icon(ui, "rotate-ccw", 16.0, Tokens::get(ui.ctx()).icon);
-        crate::scrub::note_label(ui, icon.rect);
+        crate::scrub::note_label(ui, icon.rect, tl!("Rotate"));
         // The bounding box's angle: a new value turns the selection to it.
         if let Some(a) = widgets::plain_field(ui, "rot", bx.angle, "°", 2, fw) {
             app.run("object.rotate", json!({"angle": a, "absolute": true, "copy": copy})).ok();

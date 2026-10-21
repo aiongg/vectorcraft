@@ -194,7 +194,7 @@ pub fn font_menu(
     sample: Option<&str>,
     look: MenuLook,
 ) -> Option<FontPick> {
-    let state_id = ui.id().with(&id).with("font-menu");
+    let state_id = ui.scope_id().with(&id).with("font-menu");
     let mut st: MenuState = ui.data(|d| d.get_temp(state_id)).unwrap_or_default();
     let mut drawn = false;
     let picked = widgets::combo(ui, &id, current, width, true, |ui| {
@@ -436,7 +436,7 @@ fn list(ui: &mut Ui, state_id: egui::Id, st: &mut MenuState, current: &str, samp
             }
         }
     });
-    st.scrolled = shown.state.offset.y;
+    st.scrolled = shown.state.clamped_offset().y;
     if let Some(f) = toggled {
         if st.expanded.contains(&f) {
             st.expanded.retain(|e| *e != f);
@@ -635,7 +635,7 @@ const PREVIEWING: &str = "font-previewing";
 
 /// Where the open font menu was drawn last: (pass, its popup's layer).
 fn open_id() -> egui::Id {
-    egui::Id::new("font-menu-open")
+    egui::Id::unique("font-menu-open")
 }
 
 /// Undo a preview whose menu is gone (its panel wasn't drawn: the text was deselected, the panel
@@ -799,7 +799,7 @@ mod tests {
         for _ in 0..3 {
             let mut out = ctx.run_ui(egui::RawInput { screen_rect: Some(area), ..Default::default() }, |ui| {
                 let mut child = ui.new_child(egui::UiBuilder::new().max_rect(area));
-                super::list(&mut child, egui::Id::new("fonts"), &mut st, "", None, look);
+                super::list(&mut child, egui::Id::unique("fonts"), &mut st, "", None, look);
             });
             out.textures_delta.clear();
             stars = out

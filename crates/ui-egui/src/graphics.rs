@@ -42,7 +42,7 @@ impl GraphicsLoss {
 /// context's.
 pub(crate) fn context_tag(ctx: &egui::Context) -> u64 {
     static NEXT: AtomicU64 = AtomicU64::new(1);
-    let id = egui::Id::new("vectorcraft-context-tag");
+    let id = egui::Id::unique("vectorcraft-context-tag");
     if let Some(tag) = ctx.data(|d| d.get_temp::<u64>(id)) {
         return tag;
     }

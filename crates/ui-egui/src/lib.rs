@@ -407,6 +407,8 @@ pub struct VectorcraftApp {
     /// Window captures asked for and not answered yet.
     pending_screenshots: Vec<PendingScreenshot>,
     queued_screenshots: Vec<(u64, f64, u32)>,
+    /// Screenshots the backend has taken, by token, until `collect_screenshots` hands them out.
+    taken_screenshots: TakenScreenshots,
     screenshot_token: u64,
     /// Synthetic input events (from the control channel) injected one step per frame.
     pub synthetic: Vec<egui::Event>,
@@ -494,6 +496,9 @@ pub struct VectorcraftApp {
     synthetic_frame: bool,
 }
 
+/// Screenshots the backend took, each with the token it was asked for under.
+type TakenScreenshots = Arc<Mutex<Vec<(u64, Arc<egui::ColorImage>)>>>;
+
 /// A window capture asked for through the control channel (`ui.screenshot`), answered once a
 /// frame is presented; a window that isn't presented never delivers one, hence the deadline.
 struct PendingScreenshot {
@@ -554,6 +559,7 @@ impl VectorcraftApp {
             control_rx: None,
             pending_screenshots: vec![],
             queued_screenshots: vec![],
+            taken_screenshots: Arc::default(),
             screenshot_token: 0,
             synthetic: vec![],
             styled: false,
@@ -923,7 +929,11 @@ impl VectorcraftApp {
         self.queued_screenshots.retain_mut(|(token, at, frames)| {
             *frames += 1;
             if now >= *at && *frames >= 3 {
-                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::new(*token)));
+                let (token, taken, repaint) = (*token, Arc::clone(&self.taken_screenshots), ctx.clone());
+                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::ScreenshotCallback::new(move |image| {
+                    taken.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push((token, image));
+                    repaint.request_repaint();
+                })));
                 false
             } else {
                 true
@@ -934,24 +944,12 @@ impl VectorcraftApp {
         }
     }
 
-    fn collect_screenshots(&mut self, ctx: &egui::Context) {
+    fn collect_screenshots(&mut self) {
         if self.pending_screenshots.is_empty() {
             return;
         }
-        let events: Vec<_> = ctx.input(|i| {
-            i.raw
-                .events
-                .iter()
-                .filter_map(|e| match e {
-                    egui::Event::Screenshot { user_data, image, .. } => {
-                        let token = user_data.data.as_ref().and_then(|d| d.downcast_ref::<u64>()).copied()?;
-                        Some((token, image.clone()))
-                    }
-                    _ => None,
-                })
-                .collect()
-        });
-        for (token, image) in events {
+        let taken = std::mem::take(&mut *self.taken_screenshots.lock().unwrap_or_else(std::sync::PoisonError::into_inner));
+        for (token, image) in taken {
             if let Some(i) = self.pending_screenshots.iter().position(|p| p.token == token) {
                 let p = self.pending_screenshots.remove(i);
                 let roots = self.automation_roots.clone();
@@ -1008,7 +1006,7 @@ impl VectorcraftApp {
                 Err(e) => self.status(e.to_string()),
             }
         }
-        let (last_key, focus_key) = (egui::Id::new("linkWatch.lastScan"), egui::Id::new("linkWatch.focused"));
+        let (last_key, focus_key) = (egui::Id::unique("linkWatch.lastScan"), egui::Id::unique("linkWatch.focused"));
         let focused = ctx.input(|i| i.focused);
         let was_focused: bool = ctx.data(|d| d.get_temp(focus_key)).unwrap_or(focused);
         ctx.data_mut(|d| d.insert_temp(focus_key, focused));
@@ -1017,7 +1015,7 @@ impl VectorcraftApp {
         }
         let last: f64 = ctx.data(|d| d.get_temp(last_key)).unwrap_or(f64::NEG_INFINITY);
         // The active document as the last look saw it: its uid and revision.
-        let (seen_key, doc) = (egui::Id::new("linkWatch.seen"), self.session.active().map(|d| (d.uid, d.revision)));
+        let (seen_key, doc) = (egui::Id::unique("linkWatch.seen"), self.session.active().map(|d| (d.uid, d.revision)));
         if now - last >= 2.0 || (focused && !was_focused) {
             // Walking the document's links costs a pass over it: only when a look is due.
             // `start_link_scan` starts none for a document without links, which then doesn't
@@ -1026,13 +1024,13 @@ impl VectorcraftApp {
             self.session.start_link_scan();
             let links = self.session.link_scan.is_some();
             ctx.data_mut(|d| {
-                d.insert_temp(egui::Id::new("linkWatch.links"), links);
+                d.insert_temp(egui::Id::unique("linkWatch.links"), links);
                 d.insert_temp(seen_key, doc);
             });
         }
         if self.session.link_scan.is_some() {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
-        } else if ctx.data(|d| d.get_temp::<bool>(egui::Id::new("linkWatch.links"))).unwrap_or(false) {
+        } else if ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("linkWatch.links"))).unwrap_or(false) {
             ctx.request_repaint_after(std::time::Duration::from_millis(2000));
         } else if ctx.data(|d| d.get_temp::<Option<(u64, u64)>>(seen_key)).is_some_and(|seen| seen != doc) {
             // The document changed (a file placed into one without links) or another came to the
@@ -1262,7 +1260,7 @@ impl VectorcraftApp {
         if !self.synthetic.is_empty() {
             ctx.request_repaint();
         }
-        self.collect_screenshots(ctx);
+        self.collect_screenshots();
         self.issue_screenshots(ctx);
         if let Some(u) = self.pending_url.take() {
             ctx.open_url(egui::OpenUrl::new_tab(u));

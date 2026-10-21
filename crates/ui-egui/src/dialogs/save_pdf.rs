@@ -749,8 +749,8 @@ pub(super) fn option_label(option: &str) -> String {
 /// cached until a field or the document changes.
 fn summary_of(app: &mut VectorcraftApp, ctx: &egui::Context, p: &Value) -> Result<Value, String> {
     let revision = app.session.active().map_or(0, |s| s.revision);
-    let stamp = egui::Id::new((p.to_string(), revision));
-    let key = egui::Id::new("save-pdf-summary");
+    let stamp = egui::Id::unique((p.to_string(), revision));
+    let key = egui::Id::unique("save-pdf-summary");
     if let Some((s, v)) = ctx.data(|m| m.get_temp::<(egui::Id, Result<Value, String>)>(key))
         && s == stamp
     {

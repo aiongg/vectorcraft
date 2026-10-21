@@ -20,7 +20,7 @@ windows7 = ["eframe/glow"]
 vectorcraft-engine = { workspace = true }
 vectorcraft-ui-egui = { workspace = true }
 vectorcraft-text = { workspace = true }
-eframe = { workspace = true, features = ["default_fonts", "wayland", "x11"] }
+eframe = { workspace = true, features = ["default_fonts", "wayland", "x11", "clipboard"] }
 egui = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

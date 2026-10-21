@@ -225,6 +225,7 @@ fn home_scrolls_in_a_short_window() {
         unit: egui::MouseWheelUnit::Point,
         delta: egui::vec2(0.0, -5000.0),
         phase: egui::TouchPhase::Move,
+        source: egui::MouseWheelSource::Unknown,
         modifiers: Default::default(),
     };
     visible_home_texts(&mut app, &ctx, size, 0.1, vec![egui::Event::PointerMoved(at), wheel]);

@@ -91,8 +91,9 @@ fn ordinary_panel_tab_drag_enters_shared_docking_and_can_redock_into_another_tab
     drag(&mut h, source, egui::pos2(160.0, 140.0));
     let layout = h.state().ui.docking.as_ref().expect("ordinary tab drag starts shared docking");
     assert!(layout.floating.iter().any(|g| g.panels.contains(&"layers".into())), "{layout:?}");
-    let source = h.ctx.read_response(egui::Id::new("vectorcraft-panel-docking").with(("tab", &"layers".to_string()))).unwrap().rect.center();
-    let destination = h.ctx.read_response(egui::Id::new("vectorcraft-panel-docking").with(("tab", &"properties".to_string()))).unwrap().rect.center();
+    let source = h.ctx.read_response(egui::Id::unique("vectorcraft-panel-docking").with(("tab", &"layers".to_string()))).unwrap().rect.center();
+    let destination =
+        h.ctx.read_response(egui::Id::unique("vectorcraft-panel-docking").with(("tab", &"properties".to_string()))).unwrap().rect.center();
     drag(&mut h, source, destination);
     let layout = h.state().ui.docking.as_ref().unwrap();
     assert!(!layout.floating.iter().any(|g| g.panels.contains(&"layers".into())));
@@ -289,8 +290,8 @@ fn populated_canvas_keeps_a_real_stroke_edit_after_floating_and_redocking() {
         std::fs::create_dir_all(directory).unwrap();
         h.render().unwrap().save(directory.join("vectorcraft-populated-stroke-floating.png")).unwrap();
     }
-    let from = h.ctx.read_response(egui::Id::new("vectorcraft-panel-docking").with(("tab", &"stroke".to_string()))).unwrap().rect.center();
-    let to = h.ctx.read_response(egui::Id::new("vectorcraft-panel-docking").with(("tab", &"properties".to_string()))).unwrap().rect.center();
+    let from = h.ctx.read_response(egui::Id::unique("vectorcraft-panel-docking").with(("tab", &"stroke".to_string()))).unwrap().rect.center();
+    let to = h.ctx.read_response(egui::Id::unique("vectorcraft-panel-docking").with(("tab", &"properties".to_string()))).unwrap().rect.center();
     drag(&mut h, from, to);
     assert!(h.state().ui.docking.as_ref().unwrap().floating.is_empty());
     assert_eq!(crate::panels::current_stroke(h.state()).unwrap().dash.unwrap(), dash);

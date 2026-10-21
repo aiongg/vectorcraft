@@ -53,13 +53,13 @@ pub fn artboard_rect(r: Rect, refi: usize, x: Option<f64>, y: Option<f64>, w: Op
 
 /// The reference point the Transform panel and the Control bar share (0 to 8, the center by default).
 pub fn reference_index(ui: &Ui) -> usize {
-    ui.data(|d| d.get_temp(egui::Id::new("refpt"))).unwrap_or(4)
+    ui.data(|d| d.get_temp(egui::Id::unique("refpt"))).unwrap_or(4)
 }
 
 /// The shared reference point's locator; a click on it chooses another point.
 pub fn reference_locator(ui: &mut Ui, refi: usize) {
     if let Some(i) = widgets::reference_point(ui, refi) {
-        ui.data_mut(|d| d.insert_temp(egui::Id::new("refpt"), i));
+        ui.data_mut(|d| d.insert_temp(egui::Id::unique("refpt"), i));
     }
 }
 
@@ -171,14 +171,14 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
     // point on the page.
     let bx = app.selection_box();
     let bounds = bx.map(|b| b.rect);
-    let refi: usize = ui.data(|d| d.get_temp(egui::Id::new("refpt"))).unwrap_or(4);
+    let refi: usize = ui.data(|d| d.get_temp(egui::Id::unique("refpt"))).unwrap_or(4);
     let link = proportional(app, ui);
     let copy = alt_enter_copies(app, ui);
     let has = bounds.is_some();
     let rp = bx.map(|b| b.reference_point(refi));
     ui.horizontal(|ui| {
         if let Some(i) = widgets::reference_point(ui, refi) {
-            ui.data_mut(|d| d.insert_temp(egui::Id::new("refpt"), i));
+            ui.data_mut(|d| d.insert_temp(egui::Id::unique("refpt"), i));
         }
         ui.add_space(4.0);
         ui.add_enabled_ui(has, |ui| {
@@ -210,7 +210,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
     ui.horizontal(|ui| {
         ui.add_enabled_ui(has, |ui| {
             let icon = icons::icon(ui, "rotate-ccw", 16.0, t.icon).on_hover_text(tl!("Rotate"));
-            crate::scrub::note_label(ui, icon.rect);
+            crate::scrub::note_label(ui, icon.rect, tl!("Rotate"));
             // The bounding box's angle: a new value turns the selection to it.
             let angle = bx.map_or(0.0, |b| b.angle);
             if let Some(a) = widgets::spin_plain(ui, "xfp-rot", angle, "°", 2, 96.0, 15.0, -360.0, &ANGLE_PRESETS)
@@ -220,7 +220,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
             }
             ui.add_space(4.0);
             let icon = icons::icon(ui, "dc-shear", 16.0, t.icon).on_hover_text(tl!("Shear"));
-            crate::scrub::note_label(ui, icon.rect);
+            crate::scrub::note_label(ui, icon.rect, tl!("Shear"));
             // Shear is relative: the field rests at 0° and a new value shears by it.
             if let Some(a) = widgets::spin_plain(ui, "xfp-shear", 0.0, "°", 2, 96.0, 15.0, -89.0, &SHEAR_PRESETS)
                 && a != 0.0
@@ -389,7 +389,7 @@ pub fn menu(app: &mut VectorcraftApp, ui: &mut Ui) {
     let hidden: bool = pstate(ui.ctx(), "xf-hide-options");
     let has = super::selection_len(app) > 0;
     // The flips mirror across the panel's reference point, as its flip buttons do.
-    let refi: usize = ui.data(|d| d.get_temp(egui::Id::new("refpt"))).unwrap_or(4);
+    let refi: usize = ui.data(|d| d.get_temp(egui::Id::unique("refpt"))).unwrap_or(4);
     let origin = app.selection_box().map(|b| b.reference_point(refi)).map(|p| json!([p.x, p.y]));
     if menu_item(ui, if hidden { tl!("Show Options") } else { tl!("Hide Options") }, true, false) {
         set_pstate(ui.ctx(), "xf-hide-options", !hidden);
@@ -561,7 +561,7 @@ mod tests {
         let ctx = egui::Context::default();
         crate::theme::install_fonts(&ctx);
         // Top-right reference point: (120, 30).
-        ctx.data_mut(|d| d.insert_temp(egui::Id::new("refpt"), 2usize));
+        ctx.data_mut(|d| d.insert_temp(egui::Id::unique("refpt"), 2usize));
         let flip = |app: &mut VectorcraftApp, item: &str| {
             let texts = frame_events(&ctx, app, vec![], menu);
             let r = texts.iter().find(|(t, _)| t.trim_start() == item).unwrap_or_else(|| panic!("{item} in {texts:?}")).1;

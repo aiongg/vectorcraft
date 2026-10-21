@@ -129,7 +129,7 @@ fn double_clicking_a_colour_group_opens_it_and_ok_rewrites_it() {
     let ctx = context();
     let show: fn(&mut VectorcraftApp, &mut egui::Ui) = panels::swatches::show;
     frame(&mut app, &ctx, vec![], 0.0, show);
-    let folder = ctx.read_response(egui::Id::new(("swatch-tile", "Brights"))).expect("the Brights folder").rect.center();
+    let folder = ctx.read_response(egui::Id::unique(("swatch-tile", "Brights"))).expect("the Brights folder").rect.center();
     frame(&mut app, &ctx, press(folder, 2), 1.0, show);
     let d = app.ui.dialog.as_ref().expect("a dialog opened");
     assert_eq!((d.kind.as_str(), d.str("group")), (dialogs::recolor::KIND, "Brights".to_string()));
@@ -157,7 +157,7 @@ fn the_options_button_edits_a_selected_group_and_applies_it_to_the_art() {
     art(&mut app, &["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff"]);
     let show: fn(&mut VectorcraftApp, &mut egui::Ui) = panels::swatches::show;
     frame(&mut app, &ctx, vec![], 0.0, show);
-    let folder = ctx.read_response(egui::Id::new(("swatch-tile", "Brights"))).unwrap().rect.center();
+    let folder = ctx.read_response(egui::Id::unique(("swatch-tile", "Brights"))).unwrap().rect.center();
     frame(&mut app, &ctx, press(folder, 1), 1.0, show);
     frame(&mut app, &ctx, vec![], 2.0, show);
     // The bottom bar's third button: Swatch Options, or Edit or Apply Color Group for a group.

@@ -101,15 +101,15 @@ enum Drag {
 }
 
 fn drag_id() -> egui::Id {
-    egui::Id::new("canvas-drag")
+    egui::Id::unique("canvas-drag")
 }
 /// Where the pointer was last seen during a press on the canvas.
 fn drag_pos_id() -> egui::Id {
-    egui::Id::new("canvas-drag-pos")
+    egui::Id::unique("canvas-drag-pos")
 }
 /// The document point last sent to the tool as a drag during [`Drag::Tool`].
 fn tool_drag_doc_id() -> egui::Id {
-    egui::Id::new("canvas-tool-drag-doc")
+    egui::Id::unique("canvas-tool-drag-doc")
 }
 /// Whether the tool should get another drag event: the pointer moved this frame, or its document
 /// position changed without a delta (some Wayland compositors coalesce motion until release, #834).
@@ -131,7 +131,7 @@ fn tool_drag_moved(ui: &Ui, xf: &Xf, p: Pos2, pointer: &egui::PointerState) -> b
 /// input, else the last one seen since the press (`pressed`: a new press, whose mouse has none
 /// until a pen reports it). A mouse presses fully (1).
 fn pen_pressure(ui: &Ui, pressed: bool) -> f32 {
-    let id = egui::Id::new("canvas-pressure");
+    let id = egui::Id::unique("canvas-pressure");
     let force = ui.input(|i| {
         i.events.iter().rev().find_map(|e| match e {
             egui::Event::Touch { force: Some(f), .. } if f.is_finite() => Some(f.clamp(0.0, 1.0)),
@@ -246,7 +246,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
     if bars {
         scroll_bars(app, ui, rect, outer, &t);
     }
-    let resp = ui.interact(rect, egui::Id::new("canvas"), Sense::click_and_drag());
+    let resp = ui.interact(rect, egui::Id::unique("canvas"), Sense::click_and_drag());
     // A press on the canvas while the context menu is open only closes it (a drag too, which egui
     // alone would leave open); the tool doesn't get it.
     if app.ui.dialog.as_ref().is_some_and(crate::dialogs::revolve_gizmo::active) {
@@ -615,7 +615,7 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
         let tool_cursor =
             (app.ui.screen_mode < 3).then(|| view_cursor.or_else(|| app.hover_doc.map(|p| app.session.cursor(p, mods(m, space), view_info))));
         let cur = if let Some(c) = tool_cursor.flatten() {
-            let painter = ui.ctx().layer_painter(egui::LayerId::new(egui::Order::Tooltip, egui::Id::new("tool-cursor")));
+            let painter = ui.ctx().layer_painter(egui::LayerId::new(egui::Order::Tooltip, egui::Id::unique("tool-cursor")));
             // The loaded place cursor carries the file's thumbnail.
             if app.session.tool_id() == "place"
                 && let Some(hp) = ui.input(|i| i.pointer.hover_pos())
@@ -736,7 +736,7 @@ fn cursor_icon(c: Cursor) -> egui::CursorIcon {
 fn handle_input(app: &mut VectorcraftApp, ui: &Ui, resp: &egui::Response, rect: egui::Rect) {
     let line = ui.ctx().options(|o| o.input_options.line_scroll_speed);
     let wheel_zooms = app.session.prefs.zoom_with_mouse_wheel;
-    let turn_id = egui::Id::new("canvas-wheel-turn");
+    let turn_id = egui::Id::unique("canvas-wheel-turn");
     let turn_before: WheelTurn = ui.data(|d| d.get_temp(turn_id)).unwrap_or_default();
     let mut turn = turn_before;
     let (pointer, m, space, (factor, scroll)) =
@@ -766,7 +766,7 @@ fn handle_input(app: &mut VectorcraftApp, ui: &Ui, resp: &egui::Response, rect: 
     // A modifier pressed or released over the canvas re-hovers the tool, so what it changes shows
     // without moving the mouse (Alt switches the Shape Builder to erase mode).
     let mods_changed = ui.data_mut(|d| {
-        let id = egui::Id::new("canvas-mods");
+        let id = egui::Id::unique("canvas-mods");
         let prev = d.get_temp::<egui::Modifiers>(id);
         d.insert_temp(id, m);
         prev.is_some_and(|prev| prev != m)
@@ -1094,7 +1094,7 @@ fn trackpad_turn(ui: &Ui, on: bool) -> Option<f64> {
     if deg == 0.0 || !deg.is_finite() {
         return None;
     }
-    let id = egui::Id::new("canvas-trackpad-turn");
+    let id = egui::Id::unique("canvas-trackpad-turn");
     let kept: Option<TrackpadTurn> = ui.data(|d| d.get_temp(id));
     let mut t = kept.filter(|t| now - t.last <= ROTATE_GESTURE_END).unwrap_or(TrackpadTurn { total: 0.0, last: now, turning: false });
     t.total += deg;
@@ -1180,7 +1180,7 @@ fn scroll_bars(app: &mut VectorcraftApp, ui: &Ui, rect: egui::Rect, outer: egui:
         let len = if horizontal { track.width() } else { track.height() };
         let (at, size) = span.thumb(len);
         let on_thumb = |p: Pos2| (at..=at + size).contains(&along(p));
-        let id = egui::Id::new(("canvas-scroll-bar", k));
+        let id = egui::Id::unique(("canvas-scroll-bar", k));
         let resp = ui.interact(track, id, Sense::click_and_drag());
         if resp.drag_started()
             && let Some(p) = ui.input(|i| i.pointer.press_origin())
@@ -1336,7 +1336,7 @@ fn touch_gestures(app: &mut VectorcraftApp, ui: &Ui, rect: egui::Rect, view: vec
     if touches.is_empty() {
         return;
     }
-    let key = egui::Id::new("canvas-touch");
+    let key = egui::Id::unique("canvas-touch");
     let mut taps: crate::touch::Taps = ui.data(|d| d.get_temp(key)).unwrap_or_default();
     let mut tap = None;
     for (id, phase, pos) in touches {
@@ -1445,7 +1445,7 @@ pub fn apply_requests(app: &mut VectorcraftApp, r: vectorcraft_engine::Result<Ve
 /// look, and its cell size in screen points.
 pub(crate) fn checker_texture(ctx: &egui::Context, setup: &vectorcraft_doc::DocSetup) -> (egui::TextureHandle, f32) {
     let colors = setup.grid_colors.map(|c| crate::panels::c32(&c));
-    let id = egui::Id::new("transparency-grid-tile");
+    let id = egui::Id::unique("transparency-grid-tile");
     let cached = ctx.data(|d| d.get_temp::<([Color32; 2], egui::TextureHandle)>(id)).filter(|(c, _)| *c == colors);
     let tex = cached.map(|(_, t)| t).unwrap_or_else(|| {
         let [a, b] = colors;
@@ -1622,7 +1622,7 @@ fn ruler_input(app: &mut VectorcraftApp, ui: &Ui, full: egui::Rect, canvas: egui
     let mut unit_clicked = None;
     for (r, vertical, id) in [(top, false, "ruler-top"), (left, true, "ruler-left")] {
         // Click-and-drag so the same widget drags out guides (left) and opens the unit menu (right).
-        let resp = ui.interact(r, egui::Id::new(id), Sense::click_and_drag());
+        let resp = ui.interact(r, egui::Id::unique(id), Sense::click_and_drag());
         resp.context_menu(|ui| crate::menus::ruler_menu_body(app, ui, &mut unit_clicked));
         let kind = if resp.drag_stopped() {
             PointerKind::Up
@@ -1642,7 +1642,7 @@ fn ruler_input(app: &mut VectorcraftApp, ui: &Ui, full: egui::Rect, canvas: egui
             app.status(e.to_string());
         }
     }
-    let corner = ui.interact(corner, egui::Id::new("ruler-corner"), Sense::click_and_drag());
+    let corner = ui.interact(corner, egui::Id::unique("ruler-corner"), Sense::click_and_drag());
     corner.context_menu(|ui| crate::menus::ruler_menu_body(app, ui, &mut unit_clicked));
     if let Some((id, p)) = unit_clicked {
         crate::menus::invoke(app, &id, p);
@@ -1686,7 +1686,7 @@ fn ruler_input(app: &mut VectorcraftApp, ui: &Ui, full: egui::Rect, canvas: egui
 
 /// The key of the ruler origin drag's state in egui's temporary data.
 fn ruler_origin_drag_id() -> egui::Id {
-    egui::Id::new("ruler-origin-drag")
+    egui::Id::unique("ruler-origin-drag")
 }
 
 /// Is a drag from the rulers' corner in progress? It stays true after Escape cancels the move, until
@@ -2623,11 +2623,11 @@ fn ime_output(app: &mut VectorcraftApp, ctx: &egui::Context, xf: &Xf) {
 const MIN_LABELLED_ARTBOARD: f32 = 24.0;
 
 fn name_press_id() -> egui::Id {
-    egui::Id::new("canvas-artboard-name-press")
+    egui::Id::unique("canvas-artboard-name-press")
 }
 
 fn name_edit_id() -> egui::Id {
-    egui::Id::new("canvas-artboard-name-edit")
+    egui::Id::unique("canvas-artboard-name-edit")
 }
 
 /// A name being typed above an artboard. `fresh`: this frame opened it, so a focus loss from the
@@ -2970,7 +2970,7 @@ fn recent_row(ui: &mut Ui, path: &str) -> egui::Response {
             ui.painter().galley(egui::pos2(folder_x, rect.center().y - folder_galley.size().y / 2.0), folder_galley, t.text_dim);
         }
     }
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &name));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &name));
     resp.on_hover_text(path).on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
@@ -3005,7 +3005,7 @@ fn pixel_region(xf: &Xf) -> Option<[i64; 4]> {
 
 /// The Contextual Task Bar's area.
 fn task_bar_id() -> egui::Id {
-    egui::Id::new("task-bar")
+    egui::Id::unique("task-bar")
 }
 
 /// Where the Contextual Task Bar was last drawn (none while it isn't shown).
@@ -7494,7 +7494,7 @@ mod tests {
         out.shapes
             .iter()
             .filter_map(|c| match &c.shape {
-                egui::Shape::Text(t) if bar.contains(t.visual_bounding_rect().center()) && t.galley.text() != "⚠" => {
+                egui::Shape::Text(t) if bar.contains(t.visual_bounding_rect().center()) && !t.galley.text().starts_with('⚠') => {
                     Some((t.galley.text().to_string(), t.visual_bounding_rect()))
                 }
                 _ => None,
@@ -8050,6 +8050,7 @@ mod tests {
                 unit: egui::MouseWheelUnit::Point,
                 delta: vec2(0.0, -30.0),
                 phase: egui::TouchPhase::Move,
+                source: egui::MouseWheelSource::Unknown,
                 modifiers: Default::default(),
             };
             frame(&mut app, &ctx, vec![egui::Event::PointerMoved(at)]);

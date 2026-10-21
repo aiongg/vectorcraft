@@ -20,16 +20,16 @@ const LABEL_GAP: f32 = 64.0;
 
 /// Where the scrub in progress is kept (egui memory).
 fn state_id() -> Id {
-    Id::new("numeric-field-scrub")
+    Id::unique("numeric-field-scrub")
 }
 
 /// Where the last label drawn waits for its field.
 fn label_id() -> Id {
-    Id::new("numeric-field-label")
+    Id::unique("numeric-field-label")
 }
 
 fn enabled_id() -> Id {
-    Id::new("numeric-field-scrub-enabled")
+    Id::unique("numeric-field-scrub-enabled")
 }
 
 /// Turn scrubbing on or off (General › Scrub Numeric Fields by Dragging; on until set).
@@ -101,28 +101,31 @@ pub(crate) fn end_frame(app: &mut VectorcraftApp, ctx: &Context) {
 }
 
 /// A field's label drawn this pass, waiting for the field after it.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 struct Label {
     rect: Rect,
     pass: u64,
+    name: String,
 }
 
-/// Note the label (text or icon) drawn at `rect`: a numeric field drawn right after it on the
-/// same line takes it as its label, which scrubs the field.
-pub(crate) fn note_label(ui: &Ui, rect: Rect) {
+/// Note the label (text or icon) drawn at `rect`, which reads `name`: a numeric field drawn right
+/// after it on the same line takes it as its label, which scrubs the field and names it for
+/// accessibility.
+pub(crate) fn note_label(ui: &Ui, rect: Rect, name: &str) {
     let pass = ui.ctx().cumulative_pass_nr();
-    ui.data_mut(|d| d.insert_temp(label_id(), Label { rect, pass }));
+    let name = name.trim().trim_end_matches(':').to_string();
+    ui.data_mut(|d| d.insert_temp(label_id(), Label { rect, pass, name }));
 }
 
 /// The label noted just before the field at `field`, on its line.
-fn take_label(ui: &Ui, field: Rect) -> Option<Rect> {
+fn take_label(ui: &Ui, field: Rect) -> Option<Label> {
     let l = ui.data_mut(|d| {
         let l = d.get_temp::<Label>(label_id());
         d.remove::<Label>(label_id());
         l
     })?;
     let gap = field.left() - l.rect.right();
-    (l.pass == ui.ctx().cumulative_pass_nr() && (-1.0..=LABEL_GAP).contains(&gap) && field.y_range().contains(l.rect.center().y)).then_some(l.rect)
+    (l.pass == ui.ctx().cumulative_pass_nr() && (-1.0..=LABEL_GAP).contains(&gap) && field.y_range().contains(l.rect.center().y)).then_some(l)
 }
 
 /// Scrub numeric field `field`, its box at `rect`, showing `text`: `value` in its units, rounded
@@ -132,6 +135,13 @@ fn take_label(ui: &Ui, field: Rect) -> Option<Rect> {
 /// disabled or showing no value (objects that differ).
 pub(crate) fn field(ui: &Ui, field: Id, rect: Rect, text: &str, value: Option<f64>, decimals: i32) -> Option<f64> {
     let label = take_label(ui, rect)?;
+    // A field the code named itself keeps its own name.
+    ui.ctx().accesskit_node_builder(field, |node| {
+        if node.label().is_none() && node.labelled_by().is_empty() {
+            node.set_label(label.name.as_str());
+        }
+    });
+    let label = label.rect;
     let value = value.filter(|v| v.is_finite())?;
     if !enabled(ui.ctx()) || !ui.is_enabled() {
         return None;
