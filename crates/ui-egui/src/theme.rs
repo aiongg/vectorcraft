@@ -498,9 +498,10 @@ pub fn mono(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name(FONT_MONO.into()))
 }
 
-/// The interface's CJK faces: craft-fonts' `role ui` faces, cut at build time to the characters
-/// the catalogs use (`build.rs`); empty unless built with `CRAFT_FONTS_DIR`.
-static UI_CJK_FACES: &[CraftFace] = {
+/// The interface's own craft-fonts faces (`build.rs`): the `role ui` CJK faces cut at build time to
+/// the characters the catalogs use, and on the desktop the non-CJK faces the document fonts leave
+/// out; empty unless built with `CRAFT_FONTS_DIR`.
+static UI_FACES: &[CraftFace] = {
     #[allow(unused_imports, reason = "the table built without CRAFT_FONTS_DIR is empty")]
     use CraftFace as EmbeddedFace;
     include!(concat!(env!("OUT_DIR"), "/ui_fonts.rs"))
@@ -511,10 +512,11 @@ fn is_cjk(scripts: &[&str]) -> bool {
     scripts.iter().any(|tag| matches!(tag.split('-').next(), Some("Hans" | "Hant" | "Jpan" | "Kore" | "Hani")))
 }
 
-/// The craft-fonts faces of the UI font stack: the cut CJK interface faces ([`UI_CJK_FACES`]), then
-/// the other faces of the document fonts ([`vectorcraft_text::CRAFT_FONTS`]), whose bytes they
-/// share. The full CJK document faces stay out: a character the cuts lack comes from the installed
-/// fonts. Empty unless built with `CRAFT_FONTS_DIR`.
+/// The craft-fonts faces of the UI font stack: the cut CJK interface faces, then the non-CJK faces
+/// of the document fonts ([`vectorcraft_text::CRAFT_FONTS`]: Arabic, Thai, Georgian), whose bytes
+/// they share, then the interface's other faces ([`UI_FACES`]). The full CJK document faces stay
+/// out: a character the cuts lack comes from the installed fonts. Empty unless built with
+/// `CRAFT_FONTS_DIR`.
 pub(crate) fn craft_faces() -> &'static [CraftFace] {
     static FACES: OnceLock<Vec<CraftFace>> = OnceLock::new();
     FACES.get_or_init(|| {
@@ -523,9 +525,10 @@ pub(crate) fn craft_faces() -> &'static [CraftFace] {
             style: f.style,
             scripts: f.scripts,
             bytes: f.bytes,
-            index: 0,
+            index: f.index,
         });
-        UI_CJK_FACES.iter().copied().chain(shared).collect()
+        let (cjk, other): (Vec<CraftFace>, Vec<CraftFace>) = UI_FACES.iter().copied().partition(|f| is_cjk(f.scripts));
+        cjk.into_iter().chain(shared).chain(other).collect()
     })
 }
 
@@ -703,6 +706,54 @@ mod tests {
         let stack = font_stack(crate::i18n::Lang::from_code("ko").unwrap(), craft, SystemFonts::Off);
         let mut fonts = stack.fonts(false);
         assert!("로고 레이어".chars().filter(|c| !c.is_whitespace()).all(|c| fonts.has_glyph(&FontId::proportional(13.0), c)));
+    }
+
+    /// The interface embeds no non-CJK face the document fonts embed (`build.rs`
+    /// `SHARED_WITH_DOCUMENTS`), and its stack has every one of them.
+    #[test]
+    fn interface_and_document_fonts_embed_each_face_once() {
+        let documents: Vec<String> =
+            vectorcraft_text::CRAFT_FONTS.iter().filter(|f| !is_cjk(f.scripts)).map(|f| format!("{} {}", f.family, f.style)).collect();
+        let twice: Vec<String> = UI_FACES.iter().map(CraftFace::name).filter(|n| documents.contains(n)).collect();
+        assert!(twice.is_empty(), "embedded by both tables: {twice:?}");
+        let stack: Vec<String> = craft_faces().iter().map(CraftFace::name).collect();
+        let missing: Vec<&String> = documents.iter().filter(|n| !stack.contains(n)).collect();
+        assert!(missing.is_empty(), "not in the interface stack: {missing:?}");
+    }
+
+    /// Characters the catalogs don't have, typed into a text field: a rare Han character, a
+    /// Vietnamese letter and a keyboard symbol. They never panic, and each draws with a glyph, not a
+    /// box, wherever a face of the stack has one (VectorCraft's own, craft-fonts' or an installed
+    /// font). ẫ is in VectorCraft's own faces; ⌘ in craft-fonts' symbol faces.
+    #[test]
+    fn text_field_draws_characters_outside_the_catalogs() {
+        use egui_kittest::kittest::Queryable as _;
+        const TYPED: &str = "龘ẫ⌘";
+        let stack = font_stack(crate::i18n::Lang::EN, craft_faces(), SystemFonts::AfterCraft);
+        let mut fonts = stack.fonts(true);
+        let drawn: String = TYPED.chars().filter(|c| fonts.has_glyph(&FontId::proportional(13.0), *c)).collect();
+        assert!(drawn.contains('ẫ'), "{drawn:?}");
+        if !craft_faces().is_empty() {
+            assert!(drawn.contains('⌘'), "{drawn:?}");
+        }
+        // Every character, boxes allowed; then the ones with a glyph, where a box panics.
+        for (text, boxes) in [(TYPED, true), (drawn.as_str(), false)] {
+            let builder = egui_kittest::Harness::builder();
+            let builder = if boxes { builder.allow_missing_glyphs() } else { builder };
+            let mut harness = builder.build_ui_state(
+                |ui, buf: &mut String| {
+                    ui.add(egui::TextEdit::singleline(buf)).accessible_name("Name");
+                },
+                String::new(),
+            );
+            stack.install(&harness.ctx);
+            harness.run();
+            harness.get_by_label("Name").click();
+            harness.run();
+            harness.get_by_label("Name").type_text(text);
+            harness.run();
+            assert_eq!(harness.state(), text);
+        }
     }
 
     /// Code and numbers stay in JetBrains Mono where the UI language's own face leads the text

@@ -8,10 +8,12 @@
 //!
 //! A missing or malformed file gives empty tables (or no names) and a warning.
 //!
-//! It also writes `ui_fonts.rs`, the interface's CJK faces from the optional craft-fonts build
-//! input (`CRAFT_FONTS_DIR`, see crates/text/build.rs): craft-fonts' `role ui` faces, cut to the
-//! characters VectorCraft's catalogs use (craft-fonts-build `Embed::subset_to`). Its other faces
-//! the UI shares with the document fonts (`vectorcraft_text::CRAFT_FONTS`).
+//! It also writes `ui_fonts.rs`, the interface's faces from the optional craft-fonts build input
+//! (`CRAFT_FONTS_DIR`, see crates/text/build.rs): craft-fonts' `role ui` faces, cut to the
+//! characters VectorCraft's catalogs use (craft-fonts-build `Embed::subset_to`), and on the desktop
+//! every non-CJK face the document fonts leave out (Armenian, Ethiopic, Noto Sans, emoji, symbols,
+//! math). The interface shares [`SHARED_WITH_DOCUMENTS`] with the document fonts
+//! (`vectorcraft_text::CRAFT_FONTS`).
 
 use std::fmt::Write as _;
 
@@ -38,6 +40,10 @@ fn main() {
     }
 }
 
+/// The non-CJK document font families (crates/text/build.rs `DOCUMENT_FAMILIES`), which the
+/// interface takes from `vectorcraft_text::CRAFT_FONTS` instead of embedding them twice.
+const SHARED_WITH_DOCUMENTS: &[&str] = &["Noto Sans Arabic", "Noto Sans Thai", "Noto Sans Georgian"];
+
 fn ui_fonts() {
     let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let i18n = manifest_dir.join("src/i18n");
@@ -47,7 +53,13 @@ fn ui_fonts() {
     catalogs.sort();
     // The language names in the language menu (日本語, 繁體中文).
     catalogs.push(i18n.join("mod.rs"));
-    let mut fonts = craft_fonts_build::Embed::new().filter(craft_fonts_build::ManifestEntry::is_ui).subset_to(catalogs);
+    // The web build fetches its other faces instead (crates/text/web-fonts.txt).
+    let wasm = craft_fonts_build::target_is_wasm();
+    let mut fonts = craft_fonts_build::Embed::new()
+        .for_ui()
+        .filter(move |e| e.is_ui() || (!wasm && !SHARED_WITH_DOCUMENTS.contains(&e.family.as_str())))
+        .embedded_elsewhere(SHARED_WITH_DOCUMENTS)
+        .subset_to(catalogs);
     // A relative CRAFT_FONTS_DIR is taken from the workspace root, as crates/text/build.rs does.
     if let Some(dir) = std::env::var_os("CRAFT_FONTS_DIR").filter(|d| !d.is_empty()).map(std::path::PathBuf::from).filter(|d| d.is_relative()) {
         fonts = fonts.dir(manifest_dir.join("../..").join(dir));

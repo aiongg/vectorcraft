@@ -32,6 +32,10 @@ unicode-segmentation = "1.13"
 # Apache-2.0, already in the build through subsetter.
 write-fonts = { version = "0.48", optional = true }
 
+[build-dependencies]
+# Embeds the document fonts from the optional craft-fonts checkout (`build.rs`).
+craft-fonts-build = { workspace = true }
+
 [features]
 default = ["bundled-fonts"]
 # The OFL fonts of `assets/fonts` (Source Sans 3, Source Serif 4, Inter, JetBrains Mono) compiled

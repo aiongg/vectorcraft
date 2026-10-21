@@ -1,9 +1,9 @@
 //! Fonts from the optional craft-fonts build input (<https://github.com/storytold/craft-fonts>).
 //!
-//! Built with `CRAFT_FONTS_DIR=<craft-fonts checkout>`, [`CRAFT_FONTS`] holds every font in its
-//! manifest (Japanese UI and document fonts, Arabic fonts and Noto Sans Thai); built without it,
-//! it is empty and that text falls back to the installed system fonts. Release builds always set it. See `build.rs`
-//! and craftrules `standards/fonts.md`.
+//! Built with `CRAFT_FONTS_DIR=<craft-fonts checkout>`, [`CRAFT_FONTS`] holds the document fonts
+//! `build.rs` lists (the Japanese faces, Noto Sans Arabic, Noto Sans Thai and Noto Sans Georgian);
+//! built without it, it is empty and that text falls back to the installed system fonts. Release
+//! builds always set it. See `build.rs` and craftrules `standards/fonts.md`.
 
 /// A font from the optional craft-fonts build input (empty unless built with `CRAFT_FONTS_DIR`).
 pub struct CraftFont {
@@ -11,6 +11,8 @@ pub struct CraftFont {
     pub style: &'static str,
     /// ISO 15924 scripts the font is for, e.g. `"Jpan"`.
     pub scripts: &'static [&'static str],
+    /// Face index in a font collection (`.ttc`); `0` for a single font.
+    pub index: u32,
     pub bytes: &'static [u8],
 }
 
@@ -28,7 +30,14 @@ pub struct WebFont {
     pub integrity: &'static str,
 }
 
-include!(concat!(env!("OUT_DIR"), "/craft_fonts.rs"));
+/// The document fonts (empty unless built with `CRAFT_FONTS_DIR`), in craft-fonts manifest order.
+pub static CRAFT_FONTS: &[CraftFont] = {
+    #[allow(unused_imports, reason = "the table built without CRAFT_FONTS_DIR is empty")]
+    use CraftFont as EmbeddedFace;
+    include!(concat!(env!("OUT_DIR"), "/craft_fonts_table.rs"))
+};
+
+include!(concat!(env!("OUT_DIR"), "/web_fonts.rs"));
 
 impl CraftFont {
     /// Is the font for Japanese text?
@@ -77,7 +86,8 @@ fn japanese_document_fonts_from(fonts: &[CraftFont]) -> Vec<&CraftFont> {
 /// [`japanese_document_fonts`] order, then the Arabic ones in manifest order (Noto Sans Arabic
 /// first: the fallback for Arabic text; the other families are picked by name), then the Thai ones
 /// (Noto Sans Thai: the fallback for Thai text where no Thai font is installed, and on the web),
-/// then the Georgian ones (Noto Sans Georgian, the same for Georgian). Remaining faces follow in manifest order, so every explicitly supplied family can be selected.
+/// then the Georgian ones (Noto Sans Georgian, the same for Georgian), then any others in manifest
+/// order.
 /// Empty when built without craft-fonts.
 pub fn document_fonts() -> Vec<&'static CraftFont> {
     document_fonts_from(CRAFT_FONTS)
@@ -106,7 +116,7 @@ mod tests {
 
     #[test]
     fn document_fonts_keep_script_priority_and_include_every_face_once() {
-        let font = |family, style, scripts| CraftFont { family, style, scripts, bytes: &[] };
+        let font = |family, style, scripts| CraftFont { family, style, scripts, index: 0, bytes: &[] };
         let fonts = [
             font("Chinese", "Regular", &["Hans"]),
             font("Thai", "Regular", &["Thai", "Arab"]),

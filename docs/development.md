@@ -1,6 +1,6 @@
 # Development
 
-> **Last updated:** 2026-10-21 · **Change:** the interface CJK faces cut at build time to the catalogs.
+> **Last updated:** 2026-10-21 · **Change:** document fonts as an explicit list; the interface's own non-CJK faces.
 
 ## Web build
 
@@ -120,9 +120,9 @@ Font files are never committed to this repository. Fonts shared by the Crafting 
 [`standards/fonts.md`](https://github.com/storytold/craftrules/blob/main/standards/fonts.md). To add
 a font, add it there. (The Latin fonts in `assets/fonts/` predate the rule and stay.)
 
-VectorCraft builds, tests and runs without craft-fonts. To embed its Japanese fonts (BIZ UDPGothic
-for UI text, Shippori Mincho and BIZ UDMincho for document text), point the `CRAFT_FONTS_DIR` build
-option at a checkout:
+VectorCraft builds, tests and runs without craft-fonts. To embed its document fonts (BIZ UDPGothic,
+Shippori Mincho and BIZ UDMincho for Japanese; Noto Sans Arabic, Thai and Georgian) and the
+interface's faces, point the `CRAFT_FONTS_DIR` build option at a checkout:
 
 ```sh
 git clone https://github.com/storytold/craft-fonts ../craft-fonts
@@ -130,8 +130,11 @@ CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo run --release -p vectorcraft
 CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci   # also runs the Japanese-glyph tests
 ```
 
-- `crates/text/build.rs` reads the checkout's `fonts/manifest.txt` and embeds every font it lists as
-  `vectorcraft_text::CRAFT_FONTS` (empty without `CRAFT_FONTS_DIR`). Give it an absolute path:
+- `crates/text/build.rs` embeds the families it lists (`DOCUMENT_FAMILIES`, craft-fonts-build
+  `Embed::documents`) from the checkout as `vectorcraft_text::CRAFT_FONTS` (empty without
+  `CRAFT_FONTS_DIR`). A family the checkout's manifest lacks embeds nothing, with a warning (an
+  error with `CRAFT_FONTS_REQUIRED=1`). Every manifest family `crates/text/web-fonts.txt` names is
+  in that list too. Give it an absolute path:
   build scripts run in the crate's directory (a relative path is taken from the workspace root
   as a convenience, but CI and the docs always use absolute paths). Nothing is downloaded, and
   craft-fonts is never a `Cargo.toml` dependency. A bad path is a build warning, or an error with
@@ -144,10 +147,8 @@ CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci   # also runs the Japanese-
   so they are the fallback for Japanese after the requested font; installed system fonts come after.
   Noto Sans Thai (when the checkout has it) is the fallback for Thai where no Thai font is
   installed, and the web build fetches it before the app starts (`crates/text/web-fonts.txt`).
-  Noto Sans Georgian (when the checkout has it) is the same for Georgian.
-  All other supplied faces follow those existing document fallbacks in manifest order, so they
-  can also be selected by family name. This does not change which faces the web build embeds
-  or fetches, and no craft-fonts faces are registered when the optional input is absent.
+  Noto Sans Georgian (when the checkout has it) is the same for Georgian. Other scripts fall back
+  to installed fonts. No craft-fonts faces are registered when the optional input is absent.
 - UI: `theme::install_fonts` builds every egui family with craft-ui's `fonts::UiFonts` (craft-libs
   `crates/ui` README, "UI fonts"): VectorCraft's own faces (Inter, Source Sans 3, JetBrains Mono)
   first, then the craft-fonts faces for the interface language (the Han face of its region:
@@ -156,10 +157,13 @@ CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci   # also runs the Japanese-
   when the interface language changes. The CJK faces are craft-fonts' interface faces (`role ui`:
   Noto Sans SC, TC, HK and KR UI, BIZ UDPGothic Regular), which `crates/ui-egui/build.rs` cuts to
   the characters of the catalogs in `crates/ui-egui/src/i18n` (craft-fonts-build `subset_to`;
-  about 3.4 MB for the five). The other faces are the document fonts' (`CRAFT_FONTS`), shared.
-  The full CJK document faces stay out of the UI: a character the cuts lack comes from the
-  installed fonts. `vectorcraft-cli` has no UI and links none of the cuts. On the web, which has no installed fonts, the faces it
-  fetches at startup (Noto Sans Georgian, Arabic, Thai) take their place.
+  about 3.4 MB for the five). On the desktop the same build script also embeds the non-CJK faces
+  the document fonts leave out (Noto Sans Armenian, Ethiopic, Noto Sans, Noto Color Emoji, Noto
+  Emoji, Symbols, Symbols 2 and Math: about 13 MB); Arabic, Thai and Georgian are the document
+  fonts' (`CRAFT_FONTS`), shared. The full CJK document faces stay out of the UI: a character the
+  cuts lack comes from the installed fonts. `vectorcraft-cli` has no UI and links none of these.
+  On the web, which has no installed fonts, the faces it fetches at startup (Noto Sans Georgian,
+  Arabic, Thai) take their place.
 - Tests that need Japanese or Georgian glyphs skip with a message when built without craft-fonts. The FreeBSD
   CI job and every release job (`release.yml`) check craft-fonts out at a pinned commit; release
   packages carry each embedded font's `OFL-<family>.txt`.
@@ -401,6 +405,7 @@ do not replace expected hashes automatically in response to a download mismatch.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-21 | minor | Fonts: document fonts as an explicit list (`Embed::documents`); the interface embeds the non-CJK faces documents leave out. |
 | 2026-10-21 | minor | UI fonts: the CJK interface faces cut at build time to the catalogs' characters. |
 | 2026-10-21 | minor | UI fonts: craft-ui's `fonts::UiFonts` stack with regional Han faces and installed fonts at regular weight (#2689). |
 | 2026-10-21 | minor | Fonts › Leaving out the bundled fonts: vectorcraft-ui-egui's and vectorcraft-mcp's `bundled-fonts` features, and the engine declared without default features. |
