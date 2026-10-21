@@ -256,6 +256,10 @@ pub fn handle(app: &mut VectorcraftApp, ctx: &egui::Context) {
             // Escape first restores this rotation gesture. The settings stay open.
             return;
         }
+        if crate::widgets::locale_field_scrubbing(ctx) {
+            // Escape first puts back the value a field's label was scrubbing.
+            return;
+        }
         if crate::shortcut_editor::is_recording(app) {
             return;
         }

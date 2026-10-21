@@ -375,12 +375,17 @@ pub(crate) fn dialog_focus_flag() -> egui::Id {
 /// If field `id` (showing `text`) is the first enabled field of a dialog that has just opened, give
 /// it the keyboard focus with all of `text` selected: typing replaces the value and Enter applies it.
 pub(crate) fn take_dialog_focus(ui: &Ui, id: egui::Id, text: &str) {
+    if take_dialog_flag(ui) {
+        focus_field(ui, id, text);
+    }
+}
+
+/// Whether the field about to be drawn is the first enabled field of a dialog that has just opened
+/// (lowering the flag when it is).
+fn take_dialog_flag(ui: &Ui) -> bool {
     // A new window's first frame only measures its contents: nothing can take focus yet. Nor can a
     // greyed-out field (egui drops its focus): the flag stays for the first field that is enabled.
-    if ui.is_sizing_pass() || !ui.is_enabled() || ui.data_mut(|d| d.remove_temp::<bool>(dialog_focus_flag())).is_none() {
-        return;
-    }
-    focus_field(ui, id, text);
+    !ui.is_sizing_pass() && ui.is_enabled() && ui.data_mut(|d| d.remove_temp::<bool>(dialog_focus_flag())).is_some()
 }
 
 /// Give text field `id` the keyboard focus with all of `text` selected.
@@ -624,12 +629,18 @@ pub fn exact_text_field(ui: &mut Ui, id: impl std::hash::Hash + std::fmt::Debug,
 
 /// A form row: `label` in a column `label_width` wide, then what `add` draws.
 pub fn label_row(ui: &mut Ui, label: &str, label_width: f32, add: impl FnOnce(&mut Ui)) {
+    labelled_row(ui, label, label_width, |ui, _| add(ui));
+}
+
+/// [`label_row`] handing `add` the label, for a [`locale_field`] it scrubs.
+pub(crate) fn labelled_row(ui: &mut Ui, label: &str, label_width: f32, add: impl FnOnce(&mut Ui, &Response)) {
     ui.horizontal(|ui| {
-        let (r, _) = ui.allocate_exact_size(vec2(label_width, 24.0), Sense::hover());
+        let (r, resp) = ui.allocate_exact_size(vec2(label_width, 24.0), Sense::hover());
         let t = Tokens::get(ui.ctx());
         ui.painter().text(r.left_center(), egui::Align2::LEFT_CENTER, tl!(label), egui::FontId::proportional(12.5), t.text);
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, tl!(label)));
         scrub::note_label(ui, r, tl!(label));
-        add(ui);
+        add(ui, &resp);
     });
 }
 
@@ -678,21 +689,69 @@ pub(crate) fn numbers_for(lang: crate::i18n::Lang) -> craft_ui::localized::Local
 
 /// A number kept within `range`, shown with at most `decimals` places in `numbers`' digits and
 /// decimal mark and read back the same way (`1,5` in German); ↑/↓ step it by a tenth, or by one
-/// with no decimals. Returns the new value when the user commits it.
+/// with no decimals. `None` shows a blank field (the values differ). A drag on `label` scrubs it,
+/// and it takes a dialog's first-field focus as the other fields do. Returns the new value when the
+/// user commits it.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn locale_field(
     ui: &mut Ui,
     id: impl std::hash::Hash + std::fmt::Debug,
-    value: f64,
+    value: Option<f64>,
     range: std::ops::RangeInclusive<f64>,
     decimals: usize,
     width: f32,
     numbers: &craft_ui::localized::LocaleNumbers,
+    label: Option<&Response>,
 ) -> Option<f64> {
-    let mut v = value;
-    let field =
-        craft_ui::localized::NumberField::new(&mut v, numbers).range(range).decimals(0..=decimals).step(if decimals == 0 { 1.0 } else { 0.1 });
-    let r = ui.add(field.desired_width(width).id_salt(id));
-    (r.changed() && v != value).then_some(v)
+    use craft_ui::localized::{NumberField, Recessed, focus_first_field};
+    let t = Tokens::get(ui.ctx());
+    if take_dialog_flag(ui) {
+        focus_first_field(ui.ctx(), true);
+    }
+    let frame = Recessed {
+        fill: t.input,
+        stroke: Stroke::new(1.0, t.input_border),
+        focus_stroke: Stroke::new(1.0, t.accent),
+        corner_radius: CornerRadius::same(5),
+        height: 26.0,
+        margin: egui::Margin::symmetric(7, 0),
+    };
+    let mut v = value.unwrap_or(*range.start());
+    let mut field = NumberField::new(&mut v, numbers)
+        .range(range)
+        .decimals(0..=decimals)
+        .step(if decimals == 0 { 1.0 } else { 0.1 })
+        .mixed(value.is_none())
+        .recessed(frame)
+        .desired_width(width)
+        .id_salt(id);
+    if let Some(label) = label.filter(|_| scrub::enabled(ui.ctx())) {
+        field = field.scrub_label(label);
+    }
+    let r = ui
+        .scope(|ui| {
+            ui.style_mut().override_font_id = Some(egui::FontId::proportional(12.5));
+            ui.visuals_mut().override_text_color = Some(t.text_strong);
+            theme::strong_selected_text(ui);
+            ui.add(field)
+        })
+        .inner;
+    // Escape ends a drag on the label before it reaches the dialog (`shortcuts::handle`).
+    if r.dragged() {
+        let pass = ui.ctx().cumulative_pass_nr();
+        ui.data_mut(|d| d.insert_temp(locale_scrub_flag(), pass));
+    }
+    (r.changed() && Some(v) != value).then_some(v)
+}
+
+fn locale_scrub_flag() -> egui::Id {
+    egui::Id::unique("locale-field-scrub")
+}
+
+/// Whether a [`locale_field`]'s label was being dragged in the last pass: an Escape now ends that
+/// drag and puts the value back, and leaves the dialog open.
+pub(crate) fn locale_field_scrubbing(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<u64>(locale_scrub_flag())).is_some_and(|pass| pass + 1 >= ctx.cumulative_pass_nr())
 }
 
 /// [`plain_field`] for a value the selected objects may not share: `None` shows a blank field.

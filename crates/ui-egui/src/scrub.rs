@@ -37,7 +37,7 @@ pub(crate) fn set_enabled(ctx: &Context, on: bool) {
     ctx.data_mut(|d| d.insert_temp(enabled_id(), on));
 }
 
-fn enabled(ctx: &Context) -> bool {
+pub(crate) fn enabled(ctx: &Context) -> bool {
     ctx.data(|d| d.get_temp(enabled_id())).unwrap_or(true)
 }
 

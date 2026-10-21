@@ -434,8 +434,8 @@ fn adjust_fields(ui: &mut egui::Ui, d: &mut Dialog) -> bool {
         }
     }
     if d.fields.contains_key("gamma") {
-        widgets::label_row(ui, tl!("Gamma"), LABEL_W, |ui| {
-            if let Some(g) = widgets::locale_field(ui, "gamma", d.f64("gamma", 1.0), 0.1..=10.0, 2, 60.0, &widgets::ui_numbers()) {
+        widgets::labelled_row(ui, tl!("Gamma"), LABEL_W, |ui, label| {
+            if let Some(g) = widgets::locale_field(ui, "gamma", Some(d.f64("gamma", 1.0)), 0.1..=10.0, 2, 60.0, &widgets::ui_numbers(), Some(label)) {
                 d.fields.insert("gamma".into(), json!(g));
             }
         });

@@ -46,19 +46,19 @@ fn a_focused_field_follows_a_value_changed_from_outside() {
 }
 
 /// The localized field writes and reads the interface language's decimal mark: German shows 2.25
-/// as `2,25` and reads `1,5` as 1.5.
+/// as `2,25` and reads `1,5` as 1.5. Blank for a mixed selection, a number typed into it is taken.
 #[test]
 fn a_localized_field_takes_the_languages_decimal_mark() {
     let ctx = egui::Context::default();
     crate::theme::install_fonts(&ctx);
     let de = widgets::numbers_for(crate::i18n::Lang::from_code("de").unwrap());
     let mut time = 0.0;
-    let mut frame = |value: f64, events: Vec<Event>| {
+    let mut frame = |value: Option<f64>, events: Vec<Event>| {
         time += 0.05;
         let screen_rect = Some(Rect::from_min_size(Pos2::ZERO, vec2(400.0, 200.0)));
         let mut got = (None, Rect::NOTHING);
         let mut out = ctx.run_ui(egui::RawInput { events, time: Some(time), screen_rect, focused: true, ..Default::default() }, |ui| {
-            got.0 = widgets::locale_field(ui, "f", value, 0.1..=10.0, 2, 80.0, &de);
+            got.0 = widgets::locale_field(ui, "f", value, 0.1..=10.0, 2, 80.0, &de, None);
             got.1 = ui.min_rect();
         });
         out.textures_delta.clear();
@@ -72,15 +72,19 @@ fn a_localized_field_takes_the_languages_decimal_mark() {
             .collect();
         (got.0, got.1, texts)
     };
-    let (_, rect, texts) = frame(2.25, vec![]);
+    let (_, rect, texts) = frame(Some(2.25), vec![]);
     assert!(texts.iter().any(|t| t == "2,25"), "{texts:?}");
+    // The look of the other panel fields: a box as tall as theirs, `width` wide.
+    assert_eq!((rect.width(), rect.height()), (80.0, 26.0));
+    let (_, _, texts) = frame(None, vec![]);
+    assert!(texts.iter().all(|t| t.trim().is_empty()), "{texts:?}");
     let at = rect.center();
     let button = |pos, pressed| Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE };
     let key = |key, modifiers| Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
-    frame(2.25, vec![Event::PointerMoved(at), button(at, true)]);
-    frame(2.25, vec![button(at, false)]);
-    frame(2.25, vec![key(Key::A, Modifiers::COMMAND), Event::Text("1,5".into())]);
-    assert_eq!(frame(2.25, vec![key(Key::Enter, Modifiers::NONE)]).0, Some(1.5));
+    frame(None, vec![Event::PointerMoved(at), button(at, true)]);
+    frame(None, vec![button(at, false)]);
+    frame(None, vec![key(Key::A, Modifiers::COMMAND), Event::Text("1,5".into())]);
+    assert_eq!(frame(None, vec![key(Key::Enter, Modifiers::NONE)]).0, Some(1.5));
 }
 
 /// #1692: a hex field that the focus only passes through shows the color as it is now and commits
