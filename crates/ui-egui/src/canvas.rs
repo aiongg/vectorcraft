@@ -2596,26 +2596,24 @@ fn selection_overlay(app: &mut VectorcraftApp, p: &egui::Painter, xf: &Xf, curve
     }
 }
 
-/// While the Type tool edits, let the system IME compose (egui-winit allows it only in frames that
-/// set `ime`) and keep its candidate window under the caret.
+/// While the Type tool edits, keep the system IME's candidate window under the caret.
 fn ime_output(app: &mut VectorcraftApp, ctx: &egui::Context, xf: &Xf) {
-    let ours = app.session.tool_wants_text() && !ctx.egui_wants_keyboard_input() && app.ui.dialog.is_none() && !app.ui.palette_open;
-    let caret = if ours { app.session.tool_ime_caret(app.view_info()) } else { None };
-    let Some((a, b)) = caret else {
-        // The IME goes away with its marked text: keep that text as typed, like a click away.
-        crate::shortcuts::keep_marked_text(app);
-        return;
-    };
-    let r = egui::Rect::from_two_pos(xf.to_screen(a), xf.to_screen(b)).expand2(vec2(1.0, 0.0));
-    // The tool ended the composition itself: the IME must drop what it still has marked.
-    let interrupt = app.ime_marked.is_some() && !app.session.tool_composing();
-    if interrupt {
-        app.ime_marked = None;
+    // The tool ended the composition itself (it kept the marked text): the IME must drop its copy.
+    if app.ime.is_composing() && !app.session.tool_composing() {
+        let _ = app.ime.end(ctx);
         app.ime_discard = true;
     }
-    ctx.output_mut(|o| {
-        o.ime = Some(egui::output::IMEOutput { purpose: egui::IMEPurpose::Normal, rect: r, cursor_rect: r, should_interrupt_composition: interrupt });
-    });
+    if !app.session.tool_wants_text() {
+        // The editing ended in this pass, after the composer let the IME compose: it goes away
+        // now, not a frame later. A text field's own IME output is left alone.
+        if !ctx.text_edit_focused() {
+            ctx.output_mut(|o| o.ime = None);
+        }
+        return;
+    }
+    let Some((a, b)) = app.session.tool_ime_caret(app.view_info()) else { return };
+    let r = egui::Rect::from_two_pos(xf.to_screen(a), xf.to_screen(b)).expand2(vec2(1.0, 0.0));
+    app.ime.set_caret(ctx, r);
 }
 
 /// The width an artboard needs on screen for its name to show (px): narrower, the name is left
@@ -7199,7 +7197,7 @@ mod tests {
         assert!(!app.session.tool_composing());
         assert_eq!(app.session.active().unwrap().selection.objects, vec![vectorcraft_doc::NodeId(other)]);
         assert!(ime.expect("editing the other text").should_interrupt_composition);
-        assert!(app.ime_marked.is_none());
+        assert!(!app.ime.is_composing());
         assert!(app.take_ime_discard(), "the host tells the system IME to drop its marked text");
         typing_frame(&mut app, &ctx, vec![click(b, false)]);
         // Interrupted once, not every frame.
@@ -7214,7 +7212,7 @@ mod tests {
         assert!(plain(&app, other).contains('が'), "{}", plain(&app, other));
         assert!(!app.session.tool_composing() && !app.session.tool_wants_text());
         assert!(ime.is_none());
-        assert!(app.ime_marked.is_none());
+        assert!(!app.ime.is_composing());
         assert!(app.take_ime_discard());
     }
 
@@ -7252,6 +7250,44 @@ mod tests {
         assert!(app.session.tool_composing());
         assert!(!app.take_ime_discard());
         assert_eq!(plain(&app, id), "雅がくらくか");
+    }
+
+    /// The composer's edits reach the Type tool in order: marked text and its commit, a Backspace
+    /// that empties the marked text (not the character before it), and a keyboard-hook IME's
+    /// Backspaces and letters in one frame (UniKey typing Vietnamese).
+    #[test]
+    fn composer_edits_reach_the_type_tool_in_order() {
+        let mut app = VectorcraftApp::new(Session::new(), Default::default());
+        app.session.prefs.placeholder_text = false;
+        app.session.execute("file.new", &json!({"width": 400, "height": 300})).unwrap();
+        let ctx = egui::Context::default();
+        typing_frame(&mut app, &ctx, vec![]);
+        app.select_tool("type");
+        let xf = Xf::new(app.canvas_rect.unwrap(), app.view().unwrap());
+        let at = xf.to_screen(Point::new(100.0, 100.0));
+        let click =
+            |p: Pos2, pressed| egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
+        typing_frame(&mut app, &ctx, vec![egui::Event::PointerMoved(at), click(at, true)]);
+        typing_frame(&mut app, &ctx, vec![click(at, false)]);
+        let id = app.session.active().unwrap().selection.objects[0].0;
+        let txt = |s: &str| egui::Event::Text(s.into());
+        let bs = |pressed| egui::Event::Key { key: egui::Key::Backspace, physical_key: None, pressed, repeat: false, modifiers: Default::default() };
+        typing_frame(&mut app, &ctx, vec![preedit("v", 1)]);
+        typing_frame(&mut app, &ctx, vec![preedit("vie", 3)]);
+        assert!(app.session.tool_composing());
+        assert_eq!(plain(&app, id), "vie");
+        typing_frame(&mut app, &ctx, vec![preedit("", 0), egui::Event::Ime(egui::ImeEvent::Commit("việt".into()))]);
+        assert!(!app.session.tool_composing() && !app.ime.is_composing());
+        assert_eq!(plain(&app, id), "việt");
+        typing_frame(&mut app, &ctx, vec![txt(" ")]);
+        typing_frame(&mut app, &ctx, vec![preedit("n", 1)]);
+        typing_frame(&mut app, &ctx, vec![preedit("", 0), bs(true), bs(false)]);
+        assert_eq!(plain(&app, id), "việt ", "the Backspace emptied the marked text only");
+        for frame in [vec![txt("t")], vec![txt("i")], vec![txt("e")], vec![bs(true), txt("ê")], vec![txt("n")], vec![txt("g")]] {
+            typing_frame(&mut app, &ctx, frame);
+        }
+        typing_frame(&mut app, &ctx, vec![bs(true), bs(true), bs(true), txt("ế"), txt("n"), txt("g")]);
+        assert_eq!(plain(&app, id), "việt tiếng");
     }
 
     #[test]

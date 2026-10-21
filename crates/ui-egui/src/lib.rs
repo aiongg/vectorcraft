@@ -476,9 +476,9 @@ pub struct VectorcraftApp {
     host_modifiers: egui::Modifiers,
     /// Synthetic input set the modifiers egui holds (see [`Self::raw_input_hook`]).
     synthetic_modifiers: bool,
-    /// The marked text the system IME last sent (`None` once it commits or clears). When the Type
-    /// tool stops composing on its own (a click, a tool switch), the IME is told to drop it.
-    pub(crate) ime_marked: Option<String>,
+    /// The system IME's composition for the Type tool ([`shortcuts::handle`] feeds it, the canvas
+    /// places its candidate window).
+    pub(crate) ime: craft_ui::ime::Composer,
     /// The IME must drop its marked text (see [`Self::take_ime_discard`]).
     pub(crate) ime_discard: bool,
     /// Preferences were confirmed (see [`Self::take_prefs_changed`]).
@@ -586,7 +586,7 @@ impl VectorcraftApp {
             recovery: Default::default(),
             host_modifiers: Default::default(),
             synthetic_modifiers: false,
-            ime_marked: None,
+            ime: craft_ui::ime::Composer::new(),
             ime_discard: false,
             prefs_changed: false,
             scrub_group: false,

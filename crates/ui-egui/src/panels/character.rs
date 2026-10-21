@@ -311,7 +311,7 @@ fn text_copy(app: &mut VectorcraftApp) -> bool {
     true
 }
 
-fn text_key(app: &mut VectorcraftApp, k: ToolKey, m: Mods) {
+pub(crate) fn text_key(app: &mut VectorcraftApp, k: ToolKey, m: Mods) {
     let v = app.view_info();
     if let Err(e) = app.session.tool_key(k, m, v) {
         app.status(e.to_string());
@@ -351,16 +351,32 @@ pub(crate) fn intercept_text_command(app: &mut VectorcraftApp, id: &str) -> Opti
     Some(Ok(Value::Null))
 }
 
+/// The Type tool's caret and delete keys: `key` with `m` as the tool takes it.
+pub(crate) fn editing_key(key: Key, m: egui::Modifiers) -> Option<(ToolKey, Mods)> {
+    let tk = match key {
+        Key::ArrowLeft => ToolKey::Left,
+        Key::ArrowRight => ToolKey::Right,
+        Key::ArrowUp => ToolKey::Up,
+        Key::ArrowDown => ToolKey::Down,
+        Key::Home => ToolKey::Home,
+        Key::End => ToolKey::End,
+        Key::Backspace => ToolKey::Backspace,
+        Key::Delete => ToolKey::Delete,
+        Key::Tab if !m.command => ToolKey::Tab,
+        _ => return None,
+    };
+    Some((tk, Mods { shift: m.shift, alt: m.alt, cmd: m.command, ctrl: m.ctrl && !m.command, space: false }))
+}
+
 enum TextInput {
-    Key(ToolKey, Mods),
     Copy,
     Cut,
     Paste(Option<String>),
     Face(Face),
 }
 
-/// Route editing keys (with modifiers), clipboard events and Cmd+C/X/V to the Type tool (Cmd+A is
-/// left to the Select All shortcut, which selects the text being edited).
+/// Route clipboard events, Cmd+C/X/V and Bold/Italic to the Type tool (Cmd+A is left to the Select
+/// All shortcut, which selects the text being edited).
 pub(crate) fn route_type_input(app: &mut VectorcraftApp, ctx: &egui::Context) {
     CTX.get_or_init(|| ctx.clone());
     let mut todo = vec![];
@@ -379,23 +395,9 @@ pub(crate) fn route_type_input(app: &mut VectorcraftApp, ctx: &egui::Context) {
                 false
             }
             egui::Event::Key { key, pressed, modifiers: m, .. } => {
-                let mods = Mods { shift: m.shift, alt: m.alt, cmd: m.command, ctrl: m.ctrl && !m.command, space: false };
-                let tk = match key {
-                    Key::ArrowLeft => Some(ToolKey::Left),
-                    Key::ArrowRight => Some(ToolKey::Right),
-                    Key::ArrowUp => Some(ToolKey::Up),
-                    Key::ArrowDown => Some(ToolKey::Down),
-                    Key::Home => Some(ToolKey::Home),
-                    Key::End => Some(ToolKey::End),
-                    Key::Backspace => Some(ToolKey::Backspace),
-                    Key::Delete => Some(ToolKey::Delete),
-                    Key::Tab if !m.command => Some(ToolKey::Tab),
-                    _ => None,
-                };
-                if let Some(tk) = tk {
-                    if *pressed {
-                        todo.push(TextInput::Key(tk, mods));
-                    }
+                // The caret and delete keys came in order with the typed text, from the IME's
+                // composer (`shortcuts::type_text`).
+                if editing_key(*key, *m).is_some() {
                     return false;
                 }
                 // Type › Bold and Italic, as page layout apps have them while text is edited.
@@ -422,7 +424,6 @@ pub(crate) fn route_type_input(app: &mut VectorcraftApp, ctx: &egui::Context) {
     });
     for t in todo {
         match t {
-            TextInput::Key(k, m) => text_key(app, k, m),
             TextInput::Copy => {
                 text_copy(app);
             }
