@@ -227,7 +227,7 @@ pub(crate) mod accessibility_tests {
             angle_dial(ui, "angle", 45.0, 28.0);
             channel_slider_named(ui, "channel", "H", 0.5, vec2(22.0, 80.0), &|_| Color32::GRAY);
             harmony_wheel(ui, "wheel", 120.0, &[red], Some(0));
-            combo(ui, "font", "Regular", 120.0, true, |_| None::<usize>);
+            combo_menu(ui, "font", "Regular", 120.0, |_| None::<usize>);
         });
         let slider = |label| {
             let n = named(&tree, label);

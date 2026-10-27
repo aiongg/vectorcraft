@@ -21,7 +21,7 @@ pub fn dropdown_names(ui: &mut Ui, id: impl std::hash::Hash, current: &str, opti
 
 /// [`dropdown_names`] for a row whose visible label is not an adjacent label widget.
 pub fn dropdown_names_named(ui: &mut Ui, id: impl std::hash::Hash, name: Option<&str>, current: &str, options: &[&str], width: f32) -> Option<usize> {
-    combo_named(ui, id, name, current, width, false, |ui| {
+    combo_named(ui, id, name, current, width, |ui| {
         let mut chosen = None;
         for (i, o) in options.iter().enumerate() {
             if ui.add(egui::Button::selectable(*o == current, *o)).clicked() {
@@ -55,7 +55,7 @@ pub fn dropdown_with_named(
     width: f32,
     enabled: impl Fn(usize) -> bool,
 ) -> Option<usize> {
-    combo_named(ui, id, name, tl!(current), width, false, |ui| {
+    combo_named(ui, id, name, tl!(current), width, |ui| {
         let mut chosen = None;
         for (i, o) in options.iter().enumerate() {
             if ui.add_enabled(enabled(i), egui::Button::selectable(*o == current, tl!(o))).clicked() {
@@ -74,17 +74,9 @@ pub(super) fn combo_button_id(ui: &Ui, id: &impl std::hash::Hash) -> egui::Id {
 }
 
 /// The recessed combo box of [`dropdown`] showing `current`; `list` draws the options and returns
-/// the chosen one. A `searchable` list (a search field over a list it scrolls itself) stays open
-/// while it is clicked: it closes itself when an option is chosen.
-pub(crate) fn combo<R>(
-    ui: &mut Ui,
-    id: impl std::hash::Hash,
-    current: &str,
-    width: f32,
-    searchable: bool,
-    list: impl FnOnce(&mut Ui) -> Option<R>,
-) -> Option<R> {
-    combo_named(ui, id, None, current, width, searchable, list)
+/// the chosen one.
+pub(crate) fn combo<R>(ui: &mut Ui, id: impl std::hash::Hash, current: &str, width: f32, list: impl FnOnce(&mut Ui) -> Option<R>) -> Option<R> {
+    combo_named(ui, id, None, current, width, list)
 }
 
 /// [`combo`] for a row whose visible label is not an adjacent label widget.
@@ -94,7 +86,6 @@ pub(crate) fn combo_named<R>(
     name: Option<&str>,
     current: &str,
     width: f32,
-    searchable: bool,
     list: impl FnOnce(&mut Ui) -> Option<R>,
 ) -> Option<R> {
     let t = Tokens::get(ui.ctx());
@@ -104,9 +95,6 @@ pub(crate) fn combo_named<R>(
         .stroke(Stroke::new(1.0, t.input_border))
         .corner_radius(CornerRadius::same(3))
         .show(ui, |ui| {
-            if searchable {
-                return searchable_combo(ui, id_with(ui.scope_id(), id), label, name, current, width - 4.0, list);
-            }
             let button_id = combo_button_id(ui, &id);
             let enter_for_combo = ui.memory(|m| m.has_focus(button_id)) || craft_ui::ComboBox::is_open(ui.ctx(), button_id);
             let response = craft_ui::ComboBox::from_id_salt(HashOnly(&id))
@@ -132,47 +120,11 @@ pub(crate) fn combo_named<R>(
         .inner
 }
 
-/// A dropdown whose list keeps its own search field and scrolling rows (the shortcut import's
-/// target picker): drawn as egui's combo box, but in a popup without the scroll area egui puts
-/// around a combo's list, so the field stays at the top and only the rows scroll (#555). A click
-/// outside closes it.
-fn searchable_combo<R>(
-    ui: &mut Ui,
-    id: egui::Id,
-    label: Option<PreviousLabel>,
-    name: Option<&str>,
-    current: &str,
-    width: f32,
-    list: impl FnOnce(&mut Ui) -> Option<R>,
-) -> Option<R> {
-    let resp = combo_field(ui, id, label, name, current, width);
-    let rect = resp.rect;
-    // It opens below the button, or above it when there is more room there, and the list gets
-    // the room left (the popup's frame aside).
-    const GAP: f32 = 12.0;
-    let screen = ui.ctx().content_rect();
-    let frame = ui.spacing().menu_margin.sum().y + GAP;
-    let (below, above) = (screen.bottom() - rect.bottom() - frame, rect.top() - screen.top() - frame);
-    let (align, room) = if below >= above { (egui::RectAlign::BOTTOM_START, below) } else { (egui::RectAlign::TOP_START, above) };
-    egui::Popup::menu(&resp)
-        .width(rect.width())
-        .align(align)
-        .align_alternatives(&[])
-        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| {
-            ui.set_min_width(ui.available_width());
-            ui.set_max_height(room);
-            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-            list(ui)
-        })
-        .and_then(|r| r.inner)
-}
-
 /// The recessed combo box of [`dropdown`] showing `current`, whose menu keeps a search field and
-/// filters in place over a list that scrolls (the font menu, #555). `menu` shows the menu with
-/// one of [`craft_ui::combo::Menu`]'s header forms and returns what it returned (`None` while the
-/// menu is closed). A click inside the menu keeps it open: it closes itself when an option is
-/// chosen. A click outside closes it.
+/// filters in place over a list that scrolls (the font menu and the shortcut import's target
+/// picker, #555). `menu` shows the menu with one of [`craft_ui::combo::Menu`]'s header forms and
+/// returns what it returned (`None` while the menu is closed). A click inside the menu keeps it
+/// open: it closes itself when an option is chosen. A click outside closes it.
 pub(crate) fn combo_menu<R>(
     ui: &mut Ui,
     id: impl std::hash::Hash,
