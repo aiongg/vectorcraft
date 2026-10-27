@@ -38,9 +38,9 @@ pub use color::{
     color_slider_named, color_slider_stepped, color_slider_valued, harmony_wheel, hex_field, hex_field_named, region_texture,
 };
 pub use drag::{PanelDrag, SwatchRows, art_drop, doc_preview, drag_source};
-pub(crate) use dropdowns::combo;
 #[cfg(test)]
 use dropdowns::combo_button_id;
+pub(crate) use dropdowns::{combo, combo_menu};
 pub use dropdowns::{
     dropdown, dropdown_named, dropdown_names, dropdown_names_named, dropdown_with, dropdown_with_named, list_scroll_style, menu_room, menu_scroll,
     panel_scroll, popover, set_menu_floor, strip_scroll,
